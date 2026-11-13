@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Slime Merge</string>
+    <string name="title_activity_main">Slime Merge</string>
+    <string name="package_name">com.ringh0st.slimemerge</string>
+    <string name="custom_url_scheme">com.ringh0st.slimemerge</string>
+</resources>

@@ -18,6 +18,15 @@ Open the GitHub Pages link on your phone, then:
 
 It installs with its own icon, runs full-screen and works offline.
 
+## Native apps (iOS and Android)
+
+The game is wrapped as a native app with [Capacitor](https://capacitorjs.com), in `ios/` and `android/`, with native haptics, a splash screen and offline play.
+
+- **iOS / App Store:** GitHub Actions builds, signs and uploads it to TestFlight. See **[APP_STORE.md](APP_STORE.md)** for the one-time setup.
+- **Android:** every push builds a test APK under *Actions → Android → Artifacts*.
+
+After changing the web code locally, run `npm run build && npx cap sync` to copy it into the native projects.
+
 ## Controls
 
 | Action | Touch / mouse | Keyboard |

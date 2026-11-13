@@ -1,0 +1,26 @@
+{
+  "appId": "com.ringh0st.slimemerge",
+  "appName": "Slime Merge",
+  "webDir": "dist",
+  "backgroundColor": "#f3efff",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#f3efff"
+  },
+  "android": {
+    "backgroundColor": "#f3efff"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#f3efff",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "LIGHT"
+    }
+  }
+}

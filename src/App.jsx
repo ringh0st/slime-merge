@@ -3,6 +3,7 @@ import { Game, W, H } from './game/engine.js';
 import { TIERS, tierInfo } from './game/tiers.js';
 import { sfx } from './game/audio.js';
 import SlimeIcon from './components/SlimeIcon.jsx';
+import { haptic } from './native.js';
 
 const store = {
   get(k, d) {
@@ -99,8 +100,7 @@ export default function App() {
       onDanger: setDanger,
       onMerge: (tier, n) => {
         if (n > 1) setCombo({ n, id: performance.now() });
-        // Haptic tap on phones that support it (Android).
-        navigator.vibrate?.(tier >= 6 ? [18, 30, 18] : 8);
+        haptic(tier >= 6 ? 'heavy' : n > 1 ? 'medium' : 'light');
         if (tier >= 6 && !reduceMotion) {
           shakeRef.current?.animate(
             [
@@ -125,6 +125,7 @@ export default function App() {
       },
       onGameOver: (finalScore, top) => {
         const newBest = finalScore > bestRef.current;
+        haptic(newBest ? 'success' : 'error');
         if (newBest) {
           setBest(finalScore);
           store.set('slime.best', finalScore);
