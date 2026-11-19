@@ -652,3 +652,203 @@ h2 {
   border-radius: 22px;
   z-index: 5;
 }
+
+/* Records: saving a score under a name, and the week / month / all-time lists. */
+.menu-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.menu-actions .btn {
+  min-width: 0;
+}
+.menu-actions .btn.ghost {
+  padding: 10px 18px;
+}
+/* The keyboard hint is no use on a touch screen, and small phones need the room. */
+@media (pointer: coarse) {
+  .hint {
+    display: none;
+  }
+}
+.save-score {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  width: 100%;
+}
+.save-score input {
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--ink);
+  font: 600 16px 'DM Sans', system-ui, sans-serif;
+}
+.save-score input:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.btn.save {
+  min-width: 0;
+  padding: 9px 18px;
+  font-size: 16px;
+  box-shadow:
+    0 4px 0 var(--accent-deep),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.btn.save:disabled {
+  opacity: 0.6;
+}
+.save-score .problem {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #c2410c;
+}
+.card.records {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-height: 100%;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--glass);
+}
+.tab {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 14px 'Fredoka', system-ui, sans-serif;
+  white-space: nowrap;
+}
+.tab.on {
+  background: var(--accent);
+  color: #fff;
+}
+.tab:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.record-list {
+  width: 100%;
+  min-height: 190px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.record-list ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+.record-row {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 12px 4px 6px;
+  border-radius: 12px;
+  background: var(--glass);
+  text-align: left;
+  font-weight: 600;
+}
+.record-row.mine {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.record-row .place {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font: 700 13px 'Fredoka', system-ui, sans-serif;
+  color: var(--muted);
+}
+.record-row .place.p1,
+.record-row .place.p2,
+.record-row .place.p3 {
+  color: #4a3200;
+  background: linear-gradient(180deg, #fff1a8, #f5c94a);
+}
+.record-row .place.p2 {
+  background: linear-gradient(180deg, #f4f4f8, #c5c8d6);
+}
+.record-row .place.p3 {
+  background: linear-gradient(180deg, #ffd9b8, #e0975c);
+}
+.record-row .who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-row .pts {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.ghost-row {
+  margin-bottom: 5px;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+@keyframes shimmer {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghost-row {
+    animation: none;
+  }
+}
+
+/* Short screens (a phone browser with its bars showing): the cards shrink to fit, and scroll if they still can't. */
+.card {
+  max-height: 100%;
+  overflow-y: auto;
+}
+@media (max-height: 760px) {
+  .card {
+    padding: 14px 18px 16px;
+  }
+  .hero-slimes .slime-icon {
+    width: 34px;
+    height: 34px;
+  }
+  .hero-slimes .slime-icon:nth-child(2) {
+    width: 48px;
+    height: 48px;
+  }
+  h1 {
+    font-size: 34px;
+  }
+  h1 br {
+    display: none;
+  }
+  .tag {
+    margin: 4px 0 8px;
+    font-size: 14px;
+  }
+  .howto {
+    margin-bottom: 10px;
+    font-size: 12.5px;
+    gap: 4px;
+  }
+  .final {
+    font-size: 48px;
+  }
+  .record-list {
+    min-height: 120px;
+  }
+}

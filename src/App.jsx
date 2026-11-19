@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Game, W, H } from './game/engine.js';
 import { TIERS, tierInfo } from './game/tiers.js';
 import { sfx } from './game/audio.js';
+import Records from './components/Records.jsx';
+import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import { haptic } from './native.js';
 
@@ -76,6 +78,14 @@ export default function App() {
   const [result, setResult] = useState({ score: 0, top: 4, newBest: false });
   const [toast, setToast] = useState(null);
   const [size, setSize] = useState(fitJar);
+  // Records: the name scores are saved under, whether this run's score is saved, and where the records card goes back to.
+  const [playerName, setPlayerName] = useState(() => store.get('slime.name', ''));
+  const [saved, setSaved] = useState(false);
+  const [recordsFrom, setRecordsFrom] = useState('menu');
+  const openRecords = (from) => {
+    setRecordsFrom(from);
+    setPhase('records');
+  };
 
   const bestRef = useRef(best);
   const phaseRef = useRef(phase);
@@ -131,6 +141,7 @@ export default function App() {
           store.set('slime.best', finalScore);
         }
         setResult({ score: finalScore, top, newBest });
+        setSaved(false);
         setTimeout(() => setPhase('over'), 700);
       },
     });
@@ -208,7 +219,7 @@ export default function App() {
           g.drop();
         } else if (e.key === 'Escape' || e.key === 'p') togglePause();
       } else if (phase === 'paused' && (e.key === 'Escape' || e.key === 'p')) togglePause();
-      else if ((phase === 'menu' || phase === 'over') && e.key === 'Enter') start();
+      else if ((phase === 'menu' || phase === 'over') && e.key === 'Enter' && e.target.tagName !== 'INPUT') start();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -325,7 +336,7 @@ export default function App() {
                   <SlimeIcon tier={3} size={54} />
                 </div>
                 <h1>
-                  Slime
+                  Slime{' '}
                   <br />
                   Merge
                 </h1>
@@ -348,9 +359,14 @@ export default function App() {
                     Stay under the line, or it’s game over.
                   </li>
                 </ul>
-                <button className="btn" onClick={start}>
-                  Play
-                </button>
+                <div className="menu-actions">
+                  <button className="btn" onClick={start}>
+                    Play
+                  </button>
+                  <button className="btn ghost" onClick={() => openRecords('menu')}>
+                    Records
+                  </button>
+                </div>
                 <p className="hint">Tap or click to drop · ← → and Space work too</p>
               </div>
             </div>
@@ -389,10 +405,31 @@ export default function App() {
                     <b>{TIERS[result.top].name}</b>
                   </span>
                 </div>
+                {result.score > 0 && !saved && (
+                  <SaveScore
+                    score={result.score}
+                    initialName={playerName}
+                    onSaved={(name) => {
+                      setPlayerName(name);
+                      store.set('slime.name', name);
+                      setSaved(true);
+                      openRecords('over');
+                    }}
+                  />
+                )}
                 <button className="btn" onClick={start}>
                   Play again
                 </button>
+                <button className="btn ghost" onClick={() => openRecords('over')}>
+                  Records
+                </button>
               </div>
+            </div>
+          )}
+
+          {phase === 'records' && (
+            <div className="overlay">
+              <Records mine={saved ? playerName : null} stamp={saved} onClose={() => setPhase(recordsFrom)} />
             </div>
           )}
         </div>

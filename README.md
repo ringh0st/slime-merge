@@ -47,3 +47,7 @@ npm run dev
 ## Design
 
 The look follows current UI trends: soft, toy-like 3D forms, frosted-glass panels, depth and light on a minimal base, and small interactive touches. The slimes are drawn on canvas with gradient shading, specular highlights, a spring-based squash and stretch, and faces that blink and follow your aim. The jar is a CSS 3D glass panel that tilts slightly toward the pointer.
+
+## Records
+
+After a game, players can save their score under a name and see the best of the week, the month and all time (`src/records.js`, `Records`, `SaveScore`). No accounts. The scores live in a Supabase table reached only through two functions; run `supabase/slime_records.sql` once in the Supabase SQL Editor to set it up.
