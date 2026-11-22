@@ -39,6 +39,14 @@ function fitJar() {
   return { w: Math.round(W * s), h: Math.round(H * s) };
 }
 
+/** The first game's tips, one at a time: each stays until the player has done what it says. */
+const COACH_TIPS = {
+  aim: 'Slide your finger to aim. Lift it to drop the slime.',
+  merge: 'Drop it on one of the same color: they merge into a bigger slime!',
+  line: 'Keep going! Just don’t let the slimes pile up over the dashed line.',
+  helpers: 'Stuck? The buttons below help: Shake, Pop and Hold.',
+};
+
 /** One line for each special piece, shown the first time it comes up. */
 const SPECIAL_NOTES = {
   [-1]: 'Rock: cracks when a merge happens beside it.',
@@ -133,6 +141,14 @@ export default function App() {
   const [isFighting, setIsFighting] = useState(false);
   const isFightingRef = useRef(false);
   const [clock, setClock] = useState(() => Date.now());
+  // A game that was left open (a closed tab, a locked phone), to continue: { day, jarId, score, state }.
+  const [savedRun, setSavedRun] = useState(() => store.get('slime.run', null));
+  const forgetRun = useCallback(() => {
+    store.set('slime.run', null);
+    setSavedRun(null);
+  }, []);
+  // The first game ever is guided: one short tip at a time (see the coach in the jar).
+  const [coach, setCoach] = useState(null);
   const [specialNote, setSpecialNote] = useState(null);
   const [combo, setCombo] = useState({ n: 0, id: 0 });
   const [danger, setDanger] = useState(0);
@@ -227,6 +243,35 @@ export default function App() {
       .catch(() => setAutoSave('failed'));
   }, [result, playerName]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** Writes the game being played to the device, to continue it later. */
+  const keepRun = useCallback(() => {
+    const state = gameRef.current.serialize();
+    if (!state || state.drops < 1) return;
+    const run = { day: dailyRun, jarId: jar.id, score: state.score, state };
+    store.set('slime.run', run);
+    setSavedRun(run);
+  }, [dailyRun, jar]);
+
+  // A game in progress is kept on the device every few seconds and when the game goes to the background, so a
+  // closed tab or a locked phone doesn't lose it. Fights are live and can't be continued.
+  useEffect(() => {
+    if ((phase !== 'play' && phase !== 'paused') || isFighting) return undefined;
+    const keep = keepRun;
+    const timer = setInterval(keep, 3000);
+    const onHide = () => document.hidden && keep();
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', keep);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', keep);
+    };
+  }, [phase, isFighting, keepRun]);
+  // A daily jar from another day can't be continued.
+  useEffect(() => {
+    if (savedRun?.day && savedRun.day !== dayKey()) forgetRun();
+  }, [savedRun, forgetRun]);
+
   // Outside a game the music is calm again.
   useEffect(() => {
     if (phase !== 'play' && phase !== 'paused') sfx.setTension(0);
@@ -303,6 +348,8 @@ export default function App() {
         sfx.setTension(level);
       },
       onHelpers: setHelpers,
+      onDrop: (drops) =>
+        setCoach((step) => (step === 'aim' ? 'merge' : step === 'line' && drops >= 7 ? 'helpers' : step === 'helpers' && drops >= 10 ? null : step)),
       onBoom: () => {
         haptic('heavy');
         if (!reduceMotion) {
@@ -314,6 +361,7 @@ export default function App() {
       },
       onMerge: (tier, n) => {
         if (n > 1) setCombo({ n, id: performance.now() });
+        setCoach((step) => (step === 'merge' ? 'line' : step));
         // In a fight a combo drops rocks into the other player's jar.
         if (isFightingRef.current) fightRef.current.attack(rocksForCombo(n));
         haptic(tier >= 6 ? 'heavy' : n > 1 ? 'medium' : 'light');
@@ -341,6 +389,10 @@ export default function App() {
         });
       },
       onGameOver: (finalScore, top, run, wasLeft) => {
+        store.set('slime.run', null);
+        setSavedRun(null);
+        store.set('slime.coached', true);
+        setCoach(null);
         const day = dailyRunRef.current;
         const nextLife = lifeAfterGame(lifeRef.current, finalScore, run, Boolean(day));
         // Hats and jars this game unlocked, to celebrate on the game-over card.
@@ -442,7 +494,12 @@ export default function App() {
     (day = null, fightSeed = null) => {
       sfx.unlock();
       sfx.click();
+      forgetRun();
       setDailyRun(day);
+      // A first game ever: plain pieces for a while, and tips in the jar.
+      const isFirst = !fightSeed && !day && lifeRef.current.games === 0 && !store.get('slime.coached', false);
+      gameRef.current.gentle = isFirst;
+      setCoach(isFirst ? 'aim' : null);
       setIsFighting(Boolean(fightSeed));
       isFightingRef.current = Boolean(fightSeed);
       // The daily jar and a fight are always in the classic jar, so they are the same for everyone.
@@ -456,8 +513,28 @@ export default function App() {
       setIsPopping(false);
       setPhase('play');
     },
-    [jar],
+    [jar, forgetRun],
   );
+  /** Continue the game that was left open. */
+  const continueRun = () => {
+    const run = savedRun;
+    if (!run) return;
+    sfx.unlock();
+    sfx.click();
+    setDailyRun(run.day);
+    setIsFighting(false);
+    isFightingRef.current = false;
+    setCoach(null);
+    if (!run.day) pickJar(run.jarId);
+    gameRef.current.gentle = false;
+    gameRef.current.setJar(run.day ? JARS[0] : jarById(run.jarId));
+    gameRef.current.setShape();
+    gameRef.current.restore(run.state, run.day ? `daily-${run.day}` : null);
+    setDanger(0);
+    setCombo({ n: 0, id: 0 });
+    setIsPopping(false);
+    setPhase('play');
+  };
   // "Play again" after a daily jar starts a normal game: the daily is one try.
   const playAgain = () => start(null);
 
@@ -533,7 +610,22 @@ export default function App() {
     sfx.click();
     if (isInGame) {
       gameRef.current.setPaused(false);
-      leaveGame();
+      if (isFighting) leaveGame();
+      else {
+        // Going home doesn't end the game: it waits there to be continued. What was scored so far already
+        // counts for Best and, with a nickname, for the board.
+        keepRun();
+        const soFar = gameRef.current.score;
+        if (soFar > best) {
+          setBest(soFar);
+          store.set('slime.best', soFar);
+        }
+        if (playerName && soFar > 0) {
+          saveScore(playerName, soFar, { club, daily: dailyRun, top: gameRef.current.runMax, hat: wornHat })
+            .then(() => setBoardStamp((n) => n + 1))
+            .catch(() => {});
+        }
+      }
     }
     if (isInGame || phase === 'over') gameRef.current.reset('demo');
     // Leaving a fight (also from its page) tells the other player.
@@ -689,6 +781,11 @@ export default function App() {
               </div>
             )}
             {isPopping && phase === 'play' && <div className="pop-hint">Tap a slime to pop it</div>}
+            {coach && phase === 'play' && !isPopping && (
+              <div className={`coach coach-${coach}`} key={coach} role="status">
+                {COACH_TIPS[coach]}
+              </div>
+            )}
             {dailyRun && isInGame && <div className="daily-tag">Daily jar</div>}
             {isFighting && isInGame && (
               <div className="daily-tag" role="timer">
@@ -858,6 +955,8 @@ export default function App() {
               onName={rename}
               stamp={`${saved}|${boardStamp}`}
               onPlay={() => start(null)}
+              savedRun={savedRun}
+              onContinue={continueRun}
               open={openCard}
             />
           )}
@@ -922,7 +1021,7 @@ export default function App() {
           )}
           {phase === 'daily' && (
             <div className="sheet">
-              <DailyCard played={dailyPlayed} club={club} mine={playerName || null} stamp={`${saved}|${boardStamp}`} onPlay={() => start(dayKey())} onClose={closeCard} />
+              <DailyCard played={dailyPlayed} club={club} mine={playerName || null} stamp={`${saved}|${boardStamp}`} onPlay={() => (savedRun?.day === dayKey() ? continueRun() : start(dayKey()))} isOpen={savedRun?.day === dayKey()} onClose={closeCard} />
             </div>
           )}
           {phase === 'fight' && (

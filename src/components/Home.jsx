@@ -17,7 +17,7 @@ const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
  * three players of all time.
  * @param open opens one of the pages: 'daily' | 'jars' | 'club' | 'book' | 'records'
  */
-export default function Home({ best, life, jar, hat, club, discovered, dailyPlayed, passedBy, name, onName, stamp, onPlay, open }) {
+export default function Home({ best, life, jar, hat, club, discovered, dailyPlayed, passedBy, name, onName, stamp, onPlay, savedRun, onContinue, open }) {
   const today = dayKey();
   const todayScore = dailyPlayed[today];
   const openJars = JARS.filter((j) => isJarOpen(j, life.points)).length;
@@ -32,7 +32,7 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
       <p className="tag">Drop. Match. Merge. Don’t overflow.</p>
       <Nickname name={name} onChange={onName} />
 
-      {life.games === 0 && best === 0 && (
+      {life.games === 0 && best === 0 && !savedRun && (
         <ul className="howto">
           <li>
             <span className="dot" style={{ background: TIERS[2].color }} />
@@ -56,13 +56,28 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
         </button>
       )}
 
-      <button className="btn play-big" onClick={onPlay}>
-        Play
-        <small>
-          {jar.name}
-          {best > 0 ? ` · Best ${best.toLocaleString()}` : ''}
-        </small>
-      </button>
+      {/* A game that was left open comes first: continue it, or start over. */}
+      {savedRun ? (
+        <>
+          <button className="btn play-big" onClick={onContinue}>
+            Continue
+            <small>
+              {savedRun.day ? 'Daily jar' : 'Your game'} · {savedRun.score.toLocaleString()} points
+            </small>
+          </button>
+          <button className="chip-btn" onClick={onPlay}>
+            Start a new game
+          </button>
+        </>
+      ) : (
+        <button className="btn play-big" onClick={onPlay}>
+          Play
+          <small>
+            {jar.name}
+            {best > 0 ? ` · Best ${best.toLocaleString()}` : ''}
+          </small>
+        </button>
+      )}
 
       <button className="btn alt fight-btn" onClick={() => open('fight')}>
         Fight a friend

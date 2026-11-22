@@ -8,8 +8,9 @@ const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 /**
  * The daily jar: the week so far, today's board and one try at today's jar (the same pieces for everyone).
  * @param played { [day]: score } for the days played on this device
+ * @param isOpen today's jar was started and left open: it can be continued
  */
-export default function DailyCard({ played, club, mine, stamp, onPlay, onClose }) {
+export default function DailyCard({ played, club, mine, stamp, onPlay, isOpen = false, onClose }) {
   const today = dayKey();
   const week = weekOf();
   const myScore = played[today];
@@ -66,7 +67,7 @@ export default function DailyCard({ played, club, mine, stamp, onPlay, onClose }
       />
       {myScore == null ? (
         <button className="btn" onClick={onPlay}>
-          Play today’s jar
+          {isOpen ? 'Continue today’s jar' : 'Play today’s jar'}
         </button>
       ) : (
         <>

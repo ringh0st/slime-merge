@@ -1996,3 +1996,38 @@ button.chip {
   background: var(--key);
   box-shadow: inset 0 0 0 1.5px var(--line);
 }
+
+/* ---------- The first game's tips ---------- */
+.coach {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 86%;
+  padding: 10px 16px;
+  border-radius: 18px;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 5px 0 var(--accent-deep), 0 16px 26px -12px var(--shadow);
+  font: 600 15.5px 'Fredoka', system-ui, sans-serif;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: none;
+  animation: coachIn 0.35s ease both;
+}
+.coach-helpers {
+  top: auto;
+  bottom: 14px;
+}
+@keyframes coachIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coach {
+    animation: none;
+  }
+}

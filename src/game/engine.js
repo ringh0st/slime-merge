@@ -20,6 +20,8 @@ const COMBO_MS = 1200;
 const SPECIALS_FROM_DROP = 5;
 const FIRST_SPECIAL_BY_DROP = 7;
 const SPECIAL_CHANCE = 0.14;
+/** In a first game, specials and rocks wait this many drops longer. */
+const GENTLE_DELAY = 8;
 const BOMB_FUSE_MS = 900;
 const BOMB_REACH = 72;
 /** The jar of a fight: shorter, with smaller slimes, so two jars fit on one screen (see setShape). */
@@ -44,6 +46,7 @@ export class Game {
     this.dangerY = DANGER_Y;
     this.dropY = DROP_Y;
     this.fierce = false;
+    this.gentle = false;
     this.hat = null;
     this.rng = Math.random;
     this.engine = Engine.create({ gravity: { y: this.jar.gravity }, positionIterations: 8, velocityIterations: 6 });
@@ -157,9 +160,11 @@ export class Game {
   /** The piece after the one now waiting: a slime, or now and then a rock or a special. */
   pickPiece() {
     // Rocks start showing up after a while, then every 7th drop.
-    if (this.drops >= 18 && this.drops % 7 === 0) return { tier: ROCK_TIER };
-    const isDue = !this.hadSpecial && this.drops >= FIRST_SPECIAL_BY_DROP;
-    if (this.drops >= SPECIALS_FROM_DROP && (this.rng() < SPECIAL_CHANCE || isDue)) {
+    // A player's very first game stays plain for a while (`gentle`), so the basics come first.
+    const late = this.gentle ? GENTLE_DELAY : 0;
+    if (this.drops >= 18 + late && this.drops % 7 === 0) return { tier: ROCK_TIER };
+    const isDue = !this.hadSpecial && this.drops >= FIRST_SPECIAL_BY_DROP + late;
+    if (this.drops >= SPECIALS_FROM_DROP + late && (this.rng() < SPECIAL_CHANCE || isDue)) {
       this.hadSpecial = true;
       const pick = this.rng();
       if (pick < 0.4) return { tier: RAINBOW_TIER };
@@ -174,7 +179,13 @@ export class Game {
   }
 
   reset(mode, seed = null) {
-    this.rng = randomFrom(seed);
+    // The random source counts its calls, so a saved game can pick up the same series of pieces (restore).
+    const source = randomFrom(seed);
+    this.rngCalls = 0;
+    this.rng = () => {
+      this.rngCalls++;
+      return source();
+    };
     for (const b of this.bodies()) Composite.remove(this.world, b);
     this.pending.length = 0;
     this.particles.length = 0;
@@ -208,6 +219,59 @@ export class Game {
       this.cb.onDanger?.(0);
       this.cb.onHelpers?.(this.helperState());
     }
+  }
+
+  /**
+   * Everything needed to continue this game later (a closed tab, a locked phone): the numbers, the pieces waiting
+   * and every piece in the jar. Null when there is no game to keep.
+   */
+  serialize() {
+    if (this.mode !== 'play' || this.over) return null;
+    return {
+      score: this.score,
+      drops: this.drops,
+      runMax: this.runMax,
+      current: this.current,
+      next: this.next,
+      held: this.held,
+      helpers: this.helpers,
+      charge: this.charge,
+      hadSpecial: this.hadSpecial,
+      run: this.run,
+      rngCalls: this.rngCalls,
+      bodies: this.bodies()
+        .filter((b) => !b.plugin.merging)
+        .map((b) => [b.plugin.tier, Math.round(b.position.x), Math.round(b.position.y), b.plugin.frozen ? 1 : 0]),
+    };
+  }
+
+  /** Continue a game saved by serialize(). The seed must be the one the game was started with. */
+  restore(saved, seed = null) {
+    this.reset('play', seed);
+    for (let i = 0; i < saved.rngCalls; i++) this.rng();
+    Object.assign(this, {
+      score: saved.score,
+      drops: saved.drops,
+      runMax: saved.runMax,
+      current: saved.current,
+      next: saved.next,
+      held: saved.held,
+      helpers: { ...saved.helpers },
+      charge: saved.charge,
+      hadSpecial: saved.hadSpecial,
+      run: { ...saved.run },
+    });
+    for (const [tier, x, y, frozen] of saved.bodies) {
+      const b = this.spawn(tier, x, y, null, Boolean(frozen));
+      // Pieces already lying in the jar: no "just born" grace before they count against the line.
+      b.plugin.born = -1e9;
+      // A bomb that was waiting to go off starts its fuse again.
+      if (b.plugin.kind === 'bomb') b.plugin.fuseAt = this.simTime + BOMB_FUSE_MS;
+    }
+    this.cb.onScore?.(this.score);
+    this.cb.onNext?.(this.next);
+    this.cb.onDanger?.(0);
+    this.cb.onHelpers?.(this.helperState());
   }
 
   /** Start a game. With a seed (the daily jar) the same pieces drop for everyone. */
@@ -344,6 +408,7 @@ export class Game {
     this.canHold = true;
     this.cb.onNext?.(this.next);
     this.cb.onHelpers?.(this.helperState());
+    this.cb.onDrop?.(this.drops);
     sfx.drop();
     return true;
   }
