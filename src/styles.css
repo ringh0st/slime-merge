@@ -1916,3 +1916,10 @@ button.chip {
 .stage-inner.is-duel .tilt {
   transform: none;
 }
+
+/* A small note that also shows on phones (the plain .hint is for keyboards only). */
+.hint.always {
+  display: block;
+  margin: 0;
+  max-width: 300px;
+}

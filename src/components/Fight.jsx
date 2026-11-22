@@ -149,6 +149,7 @@ export default function Fight({ fight, me, onHost, onJoin, onAgain, onLeave }) {
       <button className="btn ghost" onClick={onLeave}>
         Home
       </button>
+      <p className="hint always">Fight scores are just for the fight: they don’t count for Top players or your best.</p>
     </div>
   );
 }

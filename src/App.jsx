@@ -148,6 +148,8 @@ export default function App() {
   const [saved, setSaved] = useState(false);
   // 'saving' | 'failed' | null: how the automatic save of this game's score is going.
   const [autoSave, setAutoSave] = useState(null);
+  // Goes up whenever a score reached the server, so the boards on screen load again.
+  const [boardStamp, setBoardStamp] = useState(0);
   const rename = (name) => {
     setPlayerName(name);
     store.set('slime.name', name);
@@ -228,6 +230,20 @@ export default function App() {
   useEffect(() => {
     if (phase !== 'play' && phase !== 'paused') sfx.setTension(0);
   }, [phase]);
+
+  // The board shows what Best shows: a best score made before the nickname was picked (or under an older
+  // nickname) is saved under the current one, once.
+  useEffect(() => {
+    if (!playerName || best < 1) return;
+    const onBoard = store.get('slime.boardBest', {});
+    if ((onBoard[playerName] ?? 0) >= best) return;
+    saveScore(playerName, best, { club, top: discovered, hat: wornHat })
+      .then(() => {
+        store.set('slime.boardBest', { ...onBoard, [playerName]: best });
+        setBoardStamp((n) => n + 1);
+      })
+      .catch(() => {});
+  }, [playerName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Behind a page nothing needs to move (and a game that just ended stays as it was).
   const isPageShown = PAGES.includes(phase);
@@ -339,7 +355,8 @@ export default function App() {
           });
         }
         setIsPopping(false);
-        const newBest = finalScore > bestRef.current;
+        // A fight isn't a record (rocks from the other player, a different jar): it never changes Best.
+        const newBest = finalScore > bestRef.current && !isFightingRef.current;
         if (!wasLeft) haptic(newBest ? 'success' : 'error');
         if (newBest) {
           setBest(finalScore);
@@ -838,7 +855,7 @@ export default function App() {
               passedBy={passedBy}
               name={playerName}
               onName={rename}
-              stamp={saved}
+              stamp={`${saved}|${boardStamp}`}
               onPlay={() => start(null)}
               open={openCard}
             />
@@ -894,17 +911,17 @@ export default function App() {
 
           {phase === 'records' && (
             <div className="sheet">
-              <Records mine={playerName || null} stamp={saved} onName={rename} onClose={closeCard} />
+              <Records mine={playerName || null} stamp={`${saved}|${boardStamp}`} onName={rename} onClose={closeCard} />
             </div>
           )}
           {phase === 'club' && (
             <div className="sheet">
-              <Club club={club} mine={playerName || null} stamp={saved} onJoin={joinClub} onLeave={leaveClub} onClose={closeCard} />
+              <Club club={club} mine={playerName || null} stamp={`${saved}|${boardStamp}`} onJoin={joinClub} onLeave={leaveClub} onClose={closeCard} />
             </div>
           )}
           {phase === 'daily' && (
             <div className="sheet">
-              <DailyCard played={dailyPlayed} club={club} mine={playerName || null} stamp={saved} onPlay={() => start(dayKey())} onClose={closeCard} />
+              <DailyCard played={dailyPlayed} club={club} mine={playerName || null} stamp={`${saved}|${boardStamp}`} onPlay={() => start(dayKey())} onClose={closeCard} />
             </div>
           )}
           {phase === 'fight' && (
