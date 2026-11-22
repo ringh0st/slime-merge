@@ -128,7 +128,10 @@ export default function App() {
   const [combo, setCombo] = useState({ n: 0, id: 0 });
   const [danger, setDanger] = useState(0);
   const [discovered, setDiscovered] = useState(() => store.get('slime.discovered', 4));
-  const [muted, setMuted] = useState(() => store.get('slime.muted', false));
+  // Sound effects and music have their own switches (the old single mute turned both off).
+  const [sfxOn, setSfxOn] = useState(() => store.get('slime.sfx', !store.get('slime.muted', false)));
+  const [musicOn, setMusicOn] = useState(() => store.get('slime.music', !store.get('slime.muted', false)));
+  const [isSoundOpen, setIsSoundOpen] = useState(false);
   const [result, setResult] = useState({ score: 0, top: 4, newBest: false });
   const [toast, setToast] = useState(null);
   const [size, setSize] = useState(fitJar);
@@ -261,6 +264,7 @@ export default function App() {
         setDiscovered((d) => {
           if (tier > d) {
             store.set('slime.discovered', tier);
+            sfx.discover();
             setToast({ tier, id: performance.now() });
             return tier;
           }
@@ -314,9 +318,19 @@ export default function App() {
   }, [jar, phase]);
 
   useEffect(() => {
-    sfx.setMuted(muted);
-    store.set('slime.muted', muted);
-  }, [muted]);
+    sfx.setSfx(sfxOn);
+    store.set('slime.sfx', sfxOn);
+  }, [sfxOn]);
+  useEffect(() => {
+    sfx.setMusic(musicOn);
+    store.set('slime.music', musicOn);
+  }, [musicOn]);
+  // Browsers only allow sound after a tap: the first one anywhere wakes the audio (and starts the music).
+  useEffect(() => {
+    const wake = () => sfx.unlock();
+    window.addEventListener('pointerdown', wake, { once: true });
+    return () => window.removeEventListener('pointerdown', wake);
+  }, []);
 
   useLayoutEffect(() => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -490,9 +504,33 @@ export default function App() {
               {Icon.pause}
             </button>
           )}
-          <button className="icon-btn" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Unmute' : 'Mute'}>
-            {muted ? Icon.mute : Icon.sound}
+          <button className="icon-btn" onClick={() => setIsSoundOpen((open) => !open)} aria-label="Sound" aria-expanded={isSoundOpen}>
+            {sfxOn || musicOn ? Icon.sound : Icon.mute}
           </button>
+          {isSoundOpen && (
+            <>
+              <button className="scrim" aria-label="Close" onClick={() => setIsSoundOpen(false)} />
+              <div className="sound-menu" role="group" aria-label="Sound">
+                <label>
+                  <span>Music</span>
+                  <input type="checkbox" role="switch" checked={musicOn} onChange={(event) => setMusicOn(event.target.checked)} />
+                </label>
+                <label>
+                  <span>Sound effects</span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={sfxOn}
+                    onChange={(event) => {
+                      setSfxOn(event.target.checked);
+                      sfx.setSfx(event.target.checked);
+                      sfx.click();
+                    }}
+                  />
+                </label>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
