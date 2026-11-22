@@ -13,6 +13,7 @@ import HelperBar from './components/HelperBar.jsx';
 import Home from './components/Home.jsx';
 import Fight from './components/Fight.jsx';
 import InstallHelp from './components/InstallHelp.jsx';
+import Stats from './components/Stats.jsx';
 import GhostJar from './components/GhostJar.jsx';
 import { useFight } from './useFight.js';
 import { EMOTES, rocksForCombo } from './fight.js';
@@ -20,7 +21,7 @@ import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import { haptic } from './native.js';
 import { store } from './storage.js';
-import { loadRecords, saveScore } from './records.js';
+import { countGame, countVisit, loadRecords, saveScore } from './records.js';
 import { nextToBeat, whoPassed } from './club.js';
 import { dailyStreak, dayKey, withDailyScore } from './daily.js';
 
@@ -61,7 +62,7 @@ const FROZEN_NOTE = 'Frozen: merge beside it to break the ice.';
 const NEWS_VERSION = 1;
 
 /** The screens that cover the jar. */
-const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'fight', 'install'];
+const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'fight', 'install', 'stats'];
 
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
@@ -120,7 +121,10 @@ export default function App() {
   const gameRef = useRef(null);
 
   // Players from before the big update first see what is new.
-  const [phase, setPhase] = useState(() => (store.get('slime.best', 0) > 0 && store.get('slime.news', 0) < NEWS_VERSION ? 'news' : 'home'));
+  const [phase, setPhase] = useState(() =>
+    // The owner's numbers: the game's address with ?stats at the end.
+    new URLSearchParams(window.location.search).has('stats') ? 'stats' : (store.get('slime.best', 0) > 0 && store.get('slime.news', 0) < NEWS_VERSION ? 'news' : 'home'),
+  );
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() => store.get('slime.best', 0));
   const [next, setNext] = useState({ tier: 0 });
@@ -403,6 +407,7 @@ export default function App() {
         });
       },
       onGameOver: (finalScore, top, run, wasLeft) => {
+        countGame(isFightingRef.current);
         store.set('slime.run', null);
         setSavedRun(null);
         store.set('slime.coached', true);
@@ -463,6 +468,14 @@ export default function App() {
     sfx.setMusic(musicOn);
     store.set('slime.music', musicOn);
   }, [musicOn]);
+  // Counted once a day per device, with no name or id: how many people play, and how many are new.
+  useEffect(() => {
+    const today = dayKey();
+    if (store.get('slime.countedDay', null) === today) return;
+    countVisit(store.get('slime.countedDay', null) === null);
+    store.set('slime.countedDay', today);
+  }, []);
+
   // Browsers only allow sound after a tap: the first one anywhere wakes the audio (and starts the music).
   useEffect(() => {
     const wake = () => sfx.unlock();
@@ -1074,6 +1087,11 @@ export default function App() {
                 onAgain={fightApi.again}
                 onLeave={goHome}
               />
+            </div>
+          )}
+          {phase === 'stats' && (
+            <div className="sheet">
+              <Stats onClose={() => setPhase('home')} />
             </div>
           )}
           {phase === 'install' && (

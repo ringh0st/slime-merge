@@ -2200,3 +2200,57 @@ button.chip {
     animation-timing-function: step-end;
   }
 }
+
+/* ---------- The owner's stats page ---------- */
+.card.stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.stat-tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.stat-tiles li {
+  display: grid;
+  padding: 10px 8px;
+  border-radius: 16px;
+  background: var(--glass);
+}
+.stat-tiles b {
+  font: 700 28px 'Fredoka', system-ui, sans-serif;
+  line-height: 1.1;
+}
+.stat-tiles span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.stat-days {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-days th {
+  padding: 4px 6px;
+  font: 700 11px 'Fredoka', system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+}
+.stat-days td {
+  position: relative;
+  padding: 6px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+.stat-days {
+  --bar: color-mix(in oklab, var(--accent) 22%, transparent);
+}

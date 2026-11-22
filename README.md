@@ -21,6 +21,7 @@ A squishy physics merge puzzle built with React and Matter.js.
 - **Daily streak** (`dailyStreak`): days in a row of the daily jar. Three in a row unlock the Beanie and seven the Halo, hats nothing else gives.
 - **Hiding a name** (`slime_hidden_names`): the owner can hide a name from every board by adding it to this table (the SQL file says how). There is no report button in the game.
 - **Club extras**: last week's club winner wears a small crown on the club board (`slime_club_winner`), and the home page shows the club member to beat next.
+- **How many people play** (`slime_days`, `countVisit`, `countGame`, `Stats`): each device is counted once a day (and once ever as new), and each finished game once; only the totals per day are stored, nothing personal. The owner sees them by opening the game with `?stats` at the end of its address.
 - **Home page** (`Home`): the game opens on its own page, not on a card over the jar: Play, today's daily jar with its week, and four doors (Jars, Jar club, Slime book, Records) that show where you stand. A Home button sits in the top bar on every other screen, also mid-game: leaving a game keeps what was scored (best score, goals and the boards).
 
 - **Special pieces** (`src/game/tiers.js`, `engine.js`): now and then a **Rainbow** drops (it becomes whatever slime it touches and merges with it), a **Bomb** (pops everything close a moment after it lands) or a **Frozen** slime (can't merge until a merge happens beside it). Rocks are still there.

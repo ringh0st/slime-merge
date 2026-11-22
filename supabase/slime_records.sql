@@ -170,6 +170,77 @@ as $$
   limit 1;
 $$;
 
+-- How many people play: one row a day with plain counts. No names, devices or anything personal.
+--   new_players  devices that opened the game for the first time that day
+--   players      devices that opened the game that day
+--   games        games finished that day (fights counted in `fights` too)
+create table if not exists public.slime_days (
+  day date primary key,
+  new_players integer not null default 0,
+  players integer not null default 0,
+  games integer not null default 0,
+  fights integer not null default 0
+);
+alter table public.slime_days enable row level security;
+revoke all on public.slime_days from anon, authenticated;
+
+-- A device opened the game today (the game calls this once a day per device).
+create or replace function public.slime_seen(p_new boolean)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.slime_days (day, new_players, players)
+  values ((now() at time zone 'utc')::date, case when p_new then 1 else 0 end, 1)
+  on conflict (day) do update
+    set players = slime_days.players + 1,
+        new_players = slime_days.new_players + case when p_new then 1 else 0 end;
+$$;
+
+-- A game was finished.
+create or replace function public.slime_played(p_fight boolean)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.slime_days (day, games, fights)
+  values ((now() at time zone 'utc')::date, 1, case when p_fight then 1 else 0 end)
+  on conflict (day) do update
+    set games = slime_days.games + 1,
+        fights = slime_days.fights + case when p_fight then 1 else 0 end;
+$$;
+
+-- The numbers for the stats page (open the game with ?stats at the end of its address): totals, the last 30
+-- days, and how many different names are on the boards.
+create or replace function public.slime_stats()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'players_ever', (select coalesce(sum(new_players), 0) from public.slime_days),
+    'games_ever', (select coalesce(sum(games), 0) from public.slime_days),
+    'fights_ever', (select coalesce(sum(fights), 0) from public.slime_days),
+    'names', (select count(distinct lower(name)) from public.slime_scores),
+    'counting_since', (select min(day) from public.slime_days),
+    'days', (
+      select coalesce(jsonb_agg(to_jsonb(d) order by d.day desc), '[]'::jsonb)
+      from (select * from public.slime_days where day > (now() at time zone 'utc')::date - 30) d
+    )
+  );
+$$;
+
+revoke all on function public.slime_seen(boolean) from public;
+revoke all on function public.slime_played(boolean) from public;
+revoke all on function public.slime_stats() from public;
+grant execute on function public.slime_seen(boolean) to anon, authenticated;
+grant execute on function public.slime_played(boolean) to anon, authenticated;
+grant execute on function public.slime_stats() to anon, authenticated;
+
 revoke all on function public._slime_club(text) from public;
 revoke all on function public._slime_hidden(text) from public;
 revoke all on function public.slime_club_winner(text) from public;
