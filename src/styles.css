@@ -1672,3 +1672,24 @@ button.chip {
 .name-form .btn.save {
   margin-bottom: 4px;
 }
+
+/* A hairline crossed the Save button on iPhone: the button was stretched to the height of the name field beside it
+   and its top-to-bottom color started over part-way down. Buttons keep their own height there, and their color
+   always spans the whole button exactly once. */
+.btn {
+  background-color: var(--accent);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+.btn.alt {
+  background-color: var(--accent-2);
+}
+.btn.ghost {
+  background-color: var(--key);
+}
+.save-score {
+  align-items: center;
+}
+.save-score .btn.save {
+  align-self: center;
+}
