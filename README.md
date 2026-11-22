@@ -25,7 +25,7 @@ Everything a player earns is kept on their device; only saved scores go to the s
 
 ## Play on your phone
 
-Open the GitHub Pages link on your phone, then:
+The game lives at **https://slime.lumipals.app** (GitHub Pages with a custom domain: a `CNAME` record `slime` → `ringh0st.github.io` at Cloudflare, DNS only, and the same name under the repository's Settings → Pages → Custom domain; `public/CNAME` holds it too). Open it on your phone, then:
 
 - **iPhone (Safari):** Share → **Add to Home Screen**
 - **Android (Chrome):** ⋮ menu → **Install app** / **Add to Home screen**

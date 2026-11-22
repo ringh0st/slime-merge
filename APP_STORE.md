@@ -72,7 +72,7 @@ In App Store Connect → your app → the **iOS App 1.0** page, fill in:
 
 - **Screenshots**: at least one set for 6.9" iPhone (1320 × 2868). Ask Claude to generate them.
 - **Description**, **Keywords** (e.g. `merge,slime,puzzle,physics,casual,drop`), **Support URL**: `https://github.com/ringh0st/slime-merge`
-- **Privacy Policy URL**: `https://ringh0st.github.io/slime-merge/privacy.html`
+- **Privacy Policy URL**: `https://slime.lumipals.app/privacy.html`
 - **App Privacy** (left sidebar) → Get Started → **"No, we do not collect data from this app"**
 - **Age rating** questionnaire: answer "None" to everything, which gives 4+
 - **Category**: Games → Puzzle. **Price**: Free.
