@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import SlimeIcon from './SlimeIcon.jsx';
 
+/** How often a board on screen looks for new scores. */
+const REFRESH_MS = 8000;
+
 /**
  * A board of scores: place, the player's slime (their biggest, in their hat), name and score.
  * @param load returns a promise of rows [{ place, name, score, top, hat }]
@@ -15,11 +18,23 @@ export default function RecordList({ load, watch, mine, empty = 'No records yet.
   useEffect(() => {
     let current = true;
     setState({ status: 'loading', rows: [] });
-    load()
-      .then((rows) => current && setState({ status: 'ready', rows: rows ?? [] }))
-      .catch((error) => current && setState({ status: 'error', rows: [], message: error.message }));
+    // Loads the board; `quietly` keeps what is on screen while the new rows are on their way (no flicker).
+    const refresh = (quietly) =>
+      load()
+        .then((rows) => current && setState({ status: 'ready', rows: rows ?? [] }))
+        .catch((error) => current && !quietly && setState({ status: 'error', rows: [], message: error.message }));
+    refresh(false);
+    // Other players' scores show up by themselves: the board looks again every few seconds while it is on screen,
+    // and the moment the player comes back to the game.
+    const timer = setInterval(() => document.hidden || refresh(true), REFRESH_MS);
+    const onBack = () => document.hidden || refresh(true);
+    document.addEventListener('visibilitychange', onBack);
+    window.addEventListener('focus', onBack);
     return () => {
       current = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onBack);
+      window.removeEventListener('focus', onBack);
     };
     // `load` is a new function on every render; `watch` says when the list really changes.
   }, [watch]); // eslint-disable-line react-hooks/exhaustive-deps
