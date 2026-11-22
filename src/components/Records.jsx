@@ -23,8 +23,7 @@ export default function Records({ mine, stamp, onName, onClose }) {
           </button>
         ))}
       </div>
-      <RecordList load={() => loadRecords(period)} watch={`${period}|${stamp}`} mine={mine} canReport />
-      <p className="hint always">See a name that isn’t OK? Tap the small flag next to it.</p>
+      <RecordList load={() => loadRecords(period)} watch={`${period}|${stamp}`} mine={mine} />
       <button className="btn ghost" onClick={onClose}>
         Back
       </button>

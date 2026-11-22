@@ -2093,10 +2093,7 @@ button.chip {
   vertical-align: middle;
 }
 
-/* ---------- Reporting a name, the club's winner, the next to beat ---------- */
-.record-row {
-  grid-template-columns: 26px 34px 1fr auto auto;
-}
+/* ---------- The club's winner, the next to beat ---------- */
 .record-row .who {
   display: flex;
   align-items: center;
@@ -2104,39 +2101,6 @@ button.chip {
 }
 .mini-crown {
   flex: none;
-}
-.flag {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  color: var(--muted);
-  background: transparent;
-  opacity: 0.55;
-}
-.flag:focus-visible,
-.report-ask button:focus-visible {
-  outline: 3px solid var(--accent-2);
-  outline-offset: 1px;
-}
-.report-ask {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--muted);
-}
-.report-ask button {
-  padding: 3px 10px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--accent-deep);
-  background: var(--key);
-  box-shadow: 0 2px 0 var(--key-edge);
-  font: 600 13px 'Fredoka', system-ui, sans-serif;
 }
 .winner,
 .target {

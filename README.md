@@ -19,7 +19,7 @@ A squishy physics merge puzzle built with React and Matter.js.
 - **First game** (`COACH_TIPS`, `gentle`): a new player's first game shows one tip at a time in the jar (aim and drop, merge two of a kind, stay under the line, the helpers), each staying until the player has done it, and holds back special pieces and rocks a little longer.
 - **Too high!** (`.overflow-warn`, `sfx.warn`): when slimes sit over the line, a ring empties and shows the seconds left, with a tick that rises, so an overflow never comes as a surprise.
 - **Daily streak** (`dailyStreak`): days in a row of the daily jar. Three in a row unlock the Beanie and seven the Halo, hats nothing else gives.
-- **Reporting a name** (`slime_report_name`, `slime_hidden_names`): a small flag beside each name on Top players sends it to the `slime_reports` table for the owner. Nothing is hidden by itself; the owner hides a name by adding it to `slime_hidden_names` (the SQL file says how).
+- **Hiding a name** (`slime_hidden_names`): the owner can hide a name from every board by adding it to this table (the SQL file says how). There is no report button in the game.
 - **Club extras**: last week's club winner wears a small crown on the club board (`slime_club_winner`), and the home page shows the club member to beat next.
 - **Home page** (`Home`): the game opens on its own page, not on a card over the jar: Play, today's daily jar with its week, and four doors (Jars, Jar club, Slime book, Records) that show where you stand. A Home button sits in the top bar on every other screen, also mid-game: leaving a game keeps what was scored (best score, goals and the boards).
 

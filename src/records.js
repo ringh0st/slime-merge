@@ -59,9 +59,6 @@ export async function loadDaily(day, club = null) {
   }
 }
 
-/** Tells the owner about a name on a board that shouldn't be there. Nothing is hidden until the owner decides. */
-export const reportName = (name) => call('slime_report_name', { p_name: name });
-
 /** Last week's winner of a club: { name, score }, or null. */
 export async function loadClubWinner(club) {
   try {

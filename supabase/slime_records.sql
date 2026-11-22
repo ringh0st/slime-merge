@@ -23,22 +23,18 @@ create index if not exists slime_scores_daily on public.slime_scores (daily) whe
 alter table public.slime_scores enable row level security;
 revoke all on public.slime_scores from anon, authenticated;
 
--- Names players reported, for the owner to look at (Table Editor → slime_reports), and names the owner hid.
--- To hide a name from every board, run:   insert into public.slime_hidden_names (name) values ('the name');
--- To show it again:                       delete from public.slime_hidden_names where name = 'the name';
-create table if not exists public.slime_reports (
-  id bigint generated always as identity primary key,
-  name text not null,
-  created_at timestamptz not null default now()
-);
+-- Names the owner hid from every board (a rude name the word list missed).
+-- To hide a name, run:    insert into public.slime_hidden_names (name) values ('the name');
+-- To show it again:       delete from public.slime_hidden_names where name = 'the name';
 create table if not exists public.slime_hidden_names (
   name text primary key,
   created_at timestamptz not null default now()
 );
-alter table public.slime_reports enable row level security;
 alter table public.slime_hidden_names enable row level security;
-revoke all on public.slime_reports from anon, authenticated;
 revoke all on public.slime_hidden_names from anon, authenticated;
+-- The report button was removed; these clear away what an earlier version of this file made.
+drop function if exists public.slime_report_name(text);
+drop table if exists public.slime_reports;
 
 -- Whether the owner hid this name.
 create or replace function public._slime_hidden(p_name text)
@@ -156,29 +152,6 @@ as $$
   limit 20;
 $$;
 
--- A player reports a name on a board. Nothing is hidden by itself (so nobody can remove a rival): the report
--- waits in slime_reports for the owner. One report per name a minute, thirty a minute in all.
-create or replace function public.slime_report_name(p_name text)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_name text := btrim(coalesce(p_name, ''));
-begin
-  if not exists (select 1 from public.slime_scores where lower(name) = lower(v_name)) then
-    return false;
-  end if;
-  if exists (select 1 from public.slime_reports where lower(name) = lower(v_name) and created_at > now() - interval '1 minute')
-     or (select count(*) from public.slime_reports where created_at > now() - interval '1 minute') >= 30 then
-    return true;
-  end if;
-  insert into public.slime_reports (name) values (v_name);
-  return true;
-end;
-$$;
-
 -- Last week's winner of a club (Monday to Monday, UTC): the name with the best score saved in it, if any.
 create or replace function public.slime_club_winner(p_club text)
 returns table (name text, score integer)
@@ -199,9 +172,7 @@ $$;
 
 revoke all on function public._slime_club(text) from public;
 revoke all on function public._slime_hidden(text) from public;
-revoke all on function public.slime_report_name(text) from public;
 revoke all on function public.slime_club_winner(text) from public;
-grant execute on function public.slime_report_name(text) to anon, authenticated;
 grant execute on function public.slime_club_winner(text) to anon, authenticated;
 revoke all on function public.slime_save_score(text, integer, text, date, integer, text) from public;
 revoke all on function public.slime_records(text, text) from public;

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import SlimeIcon from './SlimeIcon.jsx';
-import { reportName } from '../records.js';
 
 /** How often a board on screen looks for new scores. */
 const REFRESH_MS = 8000;
@@ -12,16 +11,9 @@ const REFRESH_MS = 8000;
  * @param mine the player's own name, to mark their row
  * @param empty what to say when nobody is on the board yet
  * @param limit show only the first few rows (the home page's top three)
- * @param canReport each row gets a small flag to report its name to the owner
  * @param crowned a name that wears a small crown (last week's club winner)
  */
-export default function RecordList({ load, watch, mine, empty = 'No records yet. Be the first!', limit = Infinity, canReport = false, crowned = null }) {
-  // The row being reported: null, a name (asking "are you sure?"), or { done: name }.
-  const [reporting, setReporting] = useState(null);
-  const report = (name) => {
-    reportName(name).catch(() => {});
-    setReporting({ done: name });
-  };
+export default function RecordList({ load, watch, mine, empty = 'No records yet. Be the first!', limit = Infinity, crowned = null }) {
   const [state, setState] = useState({ status: 'loading', rows: [] });
 
   useEffect(() => {
@@ -67,26 +59,7 @@ export default function RecordList({ load, watch, mine, empty = 'No records yet.
                   </svg>
                 )}
               </span>
-              {reporting === row.name ? (
-                <span className="report-ask">
-                  Report?
-                  <button onClick={() => report(row.name)}>Yes</button>
-                  <button onClick={() => setReporting(null)}>No</button>
-                </span>
-              ) : reporting?.done === row.name ? (
-                <span className="report-ask">Thanks!</span>
-              ) : (
-                <>
-                  <span className="pts">{row.score.toLocaleString()}</span>
-                  {canReport && !(mine && row.name.toLowerCase() === mine.toLowerCase()) && (
-                    <button className="flag" aria-label={`Report the name ${row.name}`} onClick={() => setReporting(row.name)}>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
-                      </svg>
-                    </button>
-                  )}
-                </>
-              )}
+              <span className="pts">{row.score.toLocaleString()}</span>
             </li>
           ))}
         </ol>
