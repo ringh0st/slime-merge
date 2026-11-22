@@ -12,7 +12,7 @@ A squishy physics merge puzzle built with React and Matter.js.
 ## What's in the game
 
 - **Nicknames and Top players** (`Nickname`, `Records`): a player picks a nickname once (on the home page or on Top players); after that every game's score saves by itself under it. The home page shows the top three of all time, and Top players lists all time, the month and the week.
-- **Home page** (`Home`): the game opens on its own page, not on a card over the jar: Play, today's daily jar with its week, and four doors (Jars, Jar club, Slime book, Records) that show where you stand. Pause → Home goes back to it mid-game.
+- **Home page** (`Home`): the game opens on its own page, not on a card over the jar: Play, today's daily jar with its week, and four doors (Jars, Jar club, Slime book, Records) that show where you stand. A Home button sits in the top bar on every other screen, also mid-game: leaving a game keeps what was scored (best score, goals and the boards).
 
 - **Special pieces** (`src/game/tiers.js`, `engine.js`): now and then a **Rainbow** drops (it becomes whatever slime it touches and merges with it), a **Bomb** (pops everything close a moment after it lands) or a **Frozen** slime (can't merge until a merge happens beside it). Rocks are still there.
 - **Jars** (`src/game/jars.js`, `JarPicker`): Classic, Honey (thick and sticky), Space (floaty) and the Fish bowl (round bottom, bubbles lift small slimes). A jar opens once you've scored enough points in total, over all games.

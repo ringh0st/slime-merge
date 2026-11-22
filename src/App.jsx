@@ -50,6 +50,11 @@ const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily'];
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
 const Icon = {
+  home: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 11.5 12 4l8 7.5M6.5 10v9h11v-9M10 19v-5h4v5" />
+    </svg>
+  ),
   jar: (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M8 3h8v3H8zM7 6h10a2 2 0 0 1 2 2v10a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V8a2 2 0 0 1 2-2z" />
@@ -159,10 +164,11 @@ export default function App() {
   const wornHat = unlockedHats(life).includes(hat) ? hat : null;
   // The daily jar is always the classic one, so it is the same for everyone.
   const shownJar = dailyRun ? JARS[0] : jar;
-  // A player with a nickname never types it again: each game's score saves by itself when the game ends.
+  // A player with a nickname never types it again: each game's score saves by itself when the game ends (or is
+  // left), and a score waiting for a nickname saves the moment one is picked.
   const savedResult = useRef(null);
   useEffect(() => {
-    if (!playerName || result.score < 1 || savedResult.current === result || phase !== 'over') return;
+    if (!playerName || result.score < 1 || savedResult.current === result) return;
     savedResult.current = result;
     setAutoSave('saving');
     saveScore(playerName, result.score, { club, daily: result.daily, top: result.top, hat: wornHat })
@@ -171,7 +177,7 @@ export default function App() {
         setAutoSave(null);
       })
       .catch(() => setAutoSave('failed'));
-  }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [result, playerName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Behind a page nothing needs to move (and a game that just ended stays as it was).
   const isPageShown = PAGES.includes(phase);
@@ -261,7 +267,7 @@ export default function App() {
           return d;
         });
       },
-      onGameOver: (finalScore, top, run) => {
+      onGameOver: (finalScore, top, run, wasLeft) => {
         const day = dailyRunRef.current;
         const nextLife = lifeAfterGame(lifeRef.current, finalScore, run, Boolean(day));
         // Hats and jars this game unlocked, to celebrate on the game-over card.
@@ -278,7 +284,7 @@ export default function App() {
         }
         setIsPopping(false);
         const newBest = finalScore > bestRef.current;
-        haptic(newBest ? 'success' : 'error');
+        if (!wasLeft) haptic(newBest ? 'success' : 'error');
         if (newBest) {
           setBest(finalScore);
           store.set('slime.best', finalScore);
@@ -286,7 +292,8 @@ export default function App() {
         setResult({ score: finalScore, top, newBest, newHats, newJars, daily: day });
         setSaved(false);
         setAutoSave(null);
-        setTimeout(() => setPhase('over'), 700);
+        // A game left from the pause card goes where the player asked, not to the game-over card.
+        if (!wasLeft) setTimeout(() => setPhase('over'), 700);
       },
     });
     gameRef.current = game;
@@ -418,6 +425,20 @@ export default function App() {
   };
 
   const isInGame = phase === 'play' || phase === 'paused';
+  /** Leaving a game from the pause card: what was scored so far still counts (best, goals, the boards). */
+  const leaveGame = () => {
+    if (gameRef.current.score > 0) gameRef.current.gameOver(true);
+  };
+  /** The Home button at the top: from a game (its score is kept) or from any page. */
+  const goHome = () => {
+    sfx.click();
+    if (isInGame) {
+      gameRef.current.setPaused(false);
+      leaveGame();
+    }
+    if (isInGame || phase === 'over') gameRef.current.reset('demo');
+    setPhase('home');
+  };
   const isPage = PAGES.includes(phase);
   const pickJar = (id) => {
     sfx.click();
@@ -458,6 +479,12 @@ export default function App() {
           </span>
         </div>
         <div className="actions">
+          {/* Home is always one tap away (the home page itself doesn't need it). */}
+          {phase !== 'home' && phase !== 'news' && (
+            <button className="icon-btn" onClick={goHome} aria-label="Home">
+              {Icon.home}
+            </button>
+          )}
           {(phase === 'play' || phase === 'paused') && (
             <button className="icon-btn" onClick={togglePause} aria-label="Pause">
               {Icon.pause}
@@ -542,6 +569,7 @@ export default function App() {
                   className="btn ghost"
                   onClick={() => {
                     gameRef.current.setPaused(false);
+                    leaveGame();
                     if (dailyRun) {
                       gameRef.current.reset('demo');
                       setPhase('home');
@@ -553,11 +581,7 @@ export default function App() {
                 {!dailyRun && (
                   <button
                     className="btn ghost"
-                    onClick={() => {
-                      gameRef.current.setPaused(false);
-                      gameRef.current.reset('demo');
-                      setPhase('home');
-                    }}
+                    onClick={goHome}
                   >
                     Home
                   </button>

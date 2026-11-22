@@ -482,12 +482,16 @@ export class Game {
     this.texts.push({ x: Math.min(W - 50, Math.max(50, x)), y: Math.max(40, y), s, color, combo, life: 1 });
   }
 
-  gameOver() {
+  /**
+   * The game ends: the jar overflowed, or (`wasLeft`) the player left it from the pause card. A left game still
+   * counts, so its score is kept, but there is no sad sound and no game-over card.
+   */
+  gameOver(wasLeft = false) {
     this.over = true;
     this.canDrop = false;
     for (const b of this.bodies()) b.plugin.dead = true;
-    sfx.over();
-    this.cb.onGameOver?.(this.score, this.runMax, this.run);
+    if (!wasLeft) sfx.over();
+    this.cb.onGameOver?.(this.score, this.runMax, this.run, wasLeft);
   }
 
   loop(now) {
