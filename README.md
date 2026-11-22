@@ -11,6 +11,8 @@ A squishy physics merge puzzle built with React and Matter.js.
 
 ## What's in the game
 
+- **Home page** (`Home`): the game opens on its own page, not on a card over the jar: Play, today's daily jar with its week, and four doors (Jars, Jar club, Slime book, Records) that show where you stand. Pause → Home goes back to it mid-game.
+
 - **Special pieces** (`src/game/tiers.js`, `engine.js`): now and then a **Rainbow** drops (it becomes whatever slime it touches and merges with it), a **Bomb** (pops everything close a moment after it lands) or a **Frozen** slime (can't merge until a merge happens beside it). Rocks are still there.
 - **Jars** (`src/game/jars.js`, `JarPicker`): Classic, Honey (slow and sticky), Space (floaty) and the Fish bowl (round bottom, bubbles lift small slimes). A jar opens once you've scored enough points in total, over all games.
 - **Helpers** (`HelperBar`): **Shake** makes everything jump, **Pop** removes the piece you tap, **Hold** puts the waiting piece aside. You start with one Shake and one Pop and earn more by scoring (the bar under the buttons fills).

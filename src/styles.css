@@ -1360,3 +1360,213 @@ h2 {
   text-align: left;
   font-weight: 600;
 }
+
+/* ================= Pages: the home page and the screens it opens ================= */
+/* A page takes the whole screen under the top bar; the jar, its numbers and the helpers wait hidden behind it. */
+.app.is-page .hud,
+.app.is-page .stage,
+.app.is-page .foot {
+  visibility: hidden;
+}
+.page {
+  position: absolute;
+  inset: calc(max(12px, env(safe-area-inset-top)) + 52px) 0 0 0;
+  z-index: 6;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  animation: fade 0.25s ease;
+}
+.sheet {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  min-height: 100%;
+  padding-top: 4px;
+}
+.sheet .card {
+  max-width: 420px;
+  max-height: none;
+  overflow: visible;
+}
+.sheet .record-list,
+.sheet .card.daily .record-list,
+.sheet .card.club .record-list {
+  max-height: none;
+}
+
+.home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  text-align: center;
+}
+.home .hero-slimes {
+  margin: 4px 0 -4px;
+}
+.home .hero-slimes .slime-icon {
+  width: auto;
+  height: auto;
+}
+.home h1 {
+  font-size: clamp(40px, 12vw, 56px);
+}
+.home .tag {
+  margin: -4px 0 2px;
+}
+.home .howto {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--glass);
+  font-size: 14px;
+}
+
+/* The one big button. */
+.btn.play-big {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: 14px 20px 13px;
+  border-radius: 26px;
+  font-size: 30px;
+  line-height: 1.05;
+}
+.btn.play-big small {
+  font: 600 13.5px 'DM Sans', system-ui, sans-serif;
+  opacity: 0.9;
+}
+
+/* Today's daily jar: its week and whether today is still to play. */
+.home-daily {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  padding: 12px 14px 13px;
+  border: 0;
+  border-radius: 22px;
+  color: var(--ink);
+  background: var(--glass-strong);
+  box-shadow:
+    0 5px 0 color-mix(in oklab, var(--accent-2) 45%, transparent),
+    inset 0 0 0 1.5px var(--glass-border);
+  text-align: left;
+  transition: transform 0.08s ease;
+}
+.home-daily:active,
+.home-doors button:active {
+  transform: translateY(3px);
+}
+.home-daily-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.home-daily b {
+  font: 600 20px 'Fredoka', system-ui, sans-serif;
+}
+.chip {
+  padding: 4px 11px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--glass);
+  font: 600 13px 'Fredoka', system-ui, sans-serif;
+}
+.chip.fresh {
+  color: #fff;
+  background: var(--accent-2);
+}
+.home-daily .week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+.home-daily .week span {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--glass);
+  font: 700 13px 'Fredoka', system-ui, sans-serif;
+}
+.home-daily .week .done {
+  color: #fff;
+  background: var(--accent);
+}
+.home-daily .week .today {
+  box-shadow: 0 0 0 2.5px var(--accent-2);
+}
+
+/* Four doors: each shows where the player stands. */
+.home-doors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+.home-doors button {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 10px 8px 11px;
+  border: 0;
+  border-radius: 22px;
+  color: var(--ink);
+  background: var(--glass-strong);
+  box-shadow:
+    0 5px 0 color-mix(in oklab, var(--accent) 26%, transparent),
+    inset 0 0 0 1.5px var(--glass-border);
+  transition: transform 0.08s ease;
+}
+.home-doors b {
+  font: 600 18px 'Fredoka', system-ui, sans-serif;
+}
+.home-doors small {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.home-doors .jar-mini,
+.door-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 62px;
+  color: var(--accent);
+}
+.home-doors .jar-mini {
+  width: 76px;
+  margin-bottom: 4px;
+}
+.door-art {
+  align-items: center;
+}
+.home-daily:focus-visible,
+.home-doors button:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* Very narrow phones: the numbers above the jar and the strip under it never run past the screen. */
+@media (max-width: 350px) {
+  .hud {
+    gap: 6px;
+  }
+  .hud .pill {
+    min-width: 0;
+    padding-inline: 9px;
+  }
+  .hud .next-name {
+    font-size: 13px;
+  }
+  .evo {
+    gap: 0;
+    padding: 5px 6px;
+  }
+}

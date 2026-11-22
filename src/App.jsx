@@ -10,6 +10,7 @@ import DailyCard from './components/DailyCard.jsx';
 import JarPicker from './components/JarPicker.jsx';
 import SlimeBook from './components/SlimeBook.jsx';
 import HelperBar from './components/HelperBar.jsx';
+import Home from './components/Home.jsx';
 import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import { haptic } from './native.js';
@@ -42,6 +43,9 @@ const SPECIAL_NOTES = {
 const FROZEN_NOTE = 'Frozen: merge beside it to break the ice.';
 /** What the "What's new" card was last shown for; raise it to show the card again after a big update. */
 const NEWS_VERSION = 1;
+
+/** The screens that cover the jar. */
+const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily'];
 
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
@@ -95,7 +99,7 @@ export default function App() {
   const gameRef = useRef(null);
 
   // Players from before the big update first see what is new.
-  const [phase, setPhase] = useState(() => (store.get('slime.best', 0) > 0 && store.get('slime.news', 0) < NEWS_VERSION ? 'news' : 'menu'));
+  const [phase, setPhase] = useState(() => (store.get('slime.best', 0) > 0 && store.get('slime.news', 0) < NEWS_VERSION ? 'news' : 'home'));
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() => store.get('slime.best', 0));
   const [next, setNext] = useState({ tier: 0 });
@@ -127,8 +131,8 @@ export default function App() {
   const [playerName, setPlayerName] = useState(() => store.get('slime.name', ''));
   const [saved, setSaved] = useState(false);
   // Where a card (records, club, daily…) goes back to.
-  const [cardFrom, setCardFrom] = useState('menu');
-  const openCard = (card, from = 'menu') => {
+  const [cardFrom, setCardFrom] = useState('home');
+  const openCard = (card, from = 'home') => {
     sfx.click();
     setCardFrom(from);
     setPhase(card);
@@ -149,9 +153,15 @@ export default function App() {
   const wornHat = unlockedHats(life).includes(hat) ? hat : null;
   // The daily jar is always the classic one, so it is the same for everyone.
   const shownJar = dailyRun ? JARS[0] : jar;
+  // Behind a page nothing needs to move (and a game that just ended stays as it was).
+  const isPageShown = PAGES.includes(phase);
+  useEffect(() => {
+    gameRef.current?.setPaused(isPageShown);
+  }, [isPageShown]);
+
   // In a club: who moved ahead of the player this week since they last looked.
   useEffect(() => {
-    if (phase !== 'menu' || !club || !playerName) return;
+    if (phase !== 'home' || !club || !playerName) return;
     let current = true;
     loadRecords('week', club)
       .then((rows) => {
@@ -353,7 +363,7 @@ export default function App() {
         } else if (e.key === 'h') g.hold();
         else if (e.key === 'Escape' || e.key === 'p') togglePause();
       } else if (phase === 'paused' && (e.key === 'Escape' || e.key === 'p')) togglePause();
-      else if ((phase === 'menu' || phase === 'over') && e.key === 'Enter' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') start(null);
+      else if ((phase === 'home' || phase === 'over') && e.key === 'Enter' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') start(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -387,6 +397,7 @@ export default function App() {
   };
 
   const isInGame = phase === 'play' || phase === 'paused';
+  const isPage = PAGES.includes(phase);
   const pickJar = (id) => {
     sfx.click();
     setJarId(id);
@@ -408,10 +419,9 @@ export default function App() {
     store.set('slime.club', null);
     setPassedBy([]);
   };
-  const playedToday = dailyPlayed[dayKey()] != null;
 
   return (
-    <div className="app">
+    <div className={`app ${PAGES.includes(phase) ? 'is-page' : ''}`}>
       <div className="backdrop" aria-hidden="true">
         <span className="orb o1" />
         <span className="orb o2" />
@@ -500,118 +510,6 @@ export default function App() {
           </div>
           <div className="floor" style={{ width: size.w }} />
         </div>
-          {phase === 'menu' && (
-            <div className="overlay">
-              <div className="card menu">
-                <div className="hero-slimes">
-                  <SlimeIcon tier={1} size={46} hat={wornHat} />
-                  <SlimeIcon tier={5} size={70} hat={wornHat} />
-                  <SlimeIcon tier={3} size={54} hat={wornHat} />
-                </div>
-                <h1>Slime Merge</h1>
-                <p className="tag">Drop. Match. Merge. Don’t overflow.</p>
-                {life.games === 0 && (
-                  <ul className="howto">
-                    <li>
-                      <span className="dot" style={{ background: TIERS[2].color }} />
-                      Two matching slimes merge into a bigger one.
-                    </li>
-                    <li>
-                      <span className="dot" style={{ background: TIERS[4].color }} />
-                      Chain merges quickly for combo multipliers.
-                    </li>
-                    <li>
-                      <span className="dot" style={{ background: TIERS[9].color }} />
-                      Stay under the line, or it’s game over.
-                    </li>
-                  </ul>
-                )}
-                {passedBy.length > 0 && (
-                  <button className="passed" onClick={() => openCard('club')}>
-                    <b>{passedBy[0]}</b>
-                    {passedBy.length > 1 ? ` and ${passedBy.length - 1} more` : ''} passed you this week! Play back →
-                  </button>
-                )}
-                <div className="menu-actions">
-                  <button className="btn" onClick={() => start(null)}>
-                    Play
-                  </button>
-                  <button className={`btn alt ${playedToday ? '' : 'fresh'}`} onClick={() => openCard('daily')}>
-                    Daily jar
-                  </button>
-                </div>
-                <div className="menu-tiles">
-                  <button onClick={() => openCard('jars')}>
-                    {Icon.jar}
-                    <span>Jars</span>
-                  </button>
-                  <button onClick={() => openCard('club')}>
-                    {Icon.club}
-                    <span>Club</span>
-                  </button>
-                  <button onClick={() => openCard('book')}>
-                    {Icon.book}
-                    <span>Book</span>
-                  </button>
-                  <button onClick={() => openCard('records')}>
-                    {Icon.trophy}
-                    <span>Records</span>
-                  </button>
-                </div>
-                <p className="hint">Tap or click to drop · ← → and Space work too</p>
-              </div>
-            </div>
-          )}
-
-          {phase === 'news' && (
-            <div className="overlay">
-              <div className="card news">
-                <h2>New in the jar!</h2>
-                <ul className="special-list">
-                  <li>
-                    <SlimeIcon tier={-2} size={36} />
-                    <span>
-                      <b>Special slimes</b> Rainbow, Bomb and Frozen drop in every game.
-                    </span>
-                  </li>
-                  <li>
-                    <span className="news-icon">{Icon.jar}</span>
-                    <span>
-                      <b>Helpers and jars</b> Shake, Pop and Hold under the jar. New jars open as you score.
-                    </span>
-                  </li>
-                  <li>
-                    <span className="news-icon">{Icon.club}</span>
-                    <span>
-                      <b>Jar club</b> A private board for family and friends, with one short code.
-                    </span>
-                  </li>
-                  <li>
-                    <span className="news-icon">{Icon.trophy}</span>
-                    <span>
-                      <b>Daily jar</b> The same slimes for everyone, one try a day.
-                    </span>
-                  </li>
-                  <li>
-                    <SlimeIcon tier={4} hat="top" size={36} />
-                    <span>
-                      <b>Slime book</b> Goals that unlock hats for your slimes.
-                    </span>
-                  </li>
-                </ul>
-                <button
-                  className="btn"
-                  onClick={() => {
-                    store.set('slime.news', NEWS_VERSION);
-                    setPhase('menu');
-                  }}
-                >
-                  Got it
-                </button>
-              </div>
-            </div>
-          )}
-
           {phase === 'paused' && (
             <div className="overlay">
               <div className="card small">
@@ -625,7 +523,7 @@ export default function App() {
                     gameRef.current.setPaused(false);
                     if (dailyRun) {
                       gameRef.current.reset('demo');
-                      setPhase('menu');
+                      setPhase('home');
                     } else start(null);
                   }}
                 >
@@ -637,10 +535,10 @@ export default function App() {
                     onClick={() => {
                       gameRef.current.setPaused(false);
                       gameRef.current.reset('demo');
-                      setPhase('menu');
+                      setPhase('home');
                     }}
                   >
-                    Menu
+                    Home
                   </button>
                 )}
               </div>
@@ -701,39 +599,14 @@ export default function App() {
                   <button className="btn ghost" onClick={() => (result.daily ? openCard('daily', 'over') : openRecords('over'))}>
                     {result.daily ? 'Today’s board' : club ? 'Club' : 'Records'}
                   </button>
-                  <button className="btn ghost" onClick={() => setPhase('menu')}>
-                    Menu
+                  <button className="btn ghost" onClick={() => setPhase('home')}>
+                    Home
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {phase === 'records' && (
-            <div className="overlay">
-              <Records mine={playerName || null} stamp={saved} onClose={closeCard} />
-            </div>
-          )}
-          {phase === 'club' && (
-            <div className="overlay">
-              <Club club={club} mine={playerName || null} stamp={saved} onJoin={joinClub} onLeave={leaveClub} onClose={closeCard} />
-            </div>
-          )}
-          {phase === 'daily' && (
-            <div className="overlay">
-              <DailyCard played={dailyPlayed} club={club} mine={playerName || null} stamp={saved} onPlay={() => start(dayKey())} onClose={closeCard} />
-            </div>
-          )}
-          {phase === 'jars' && (
-            <div className="overlay">
-              <JarPicker jarId={jar.id} lifetimePoints={life.points} onPick={pickJar} onClose={closeCard} />
-            </div>
-          )}
-          {phase === 'book' && (
-            <div className="overlay">
-              <SlimeBook discovered={discovered} life={life} hat={wornHat} onHat={pickHat} onClose={closeCard} />
-            </div>
-          )}
         </div>
       </main>
 
@@ -756,6 +629,100 @@ export default function App() {
           </div>
         )}
       </footer>
+
+      {/* The pages (home, what's new, jars, club, book, records, daily) cover the jar; the game waits behind them. */}
+      {isPage && (
+        <div className="page" key={phase}>
+          {phase === 'home' && (
+            <Home
+              best={best}
+              life={life}
+              jar={jar}
+              hat={wornHat}
+              club={club}
+              discovered={discovered}
+              dailyPlayed={dailyPlayed}
+              passedBy={passedBy}
+              onPlay={() => start(null)}
+              open={openCard}
+            />
+          )}
+          {phase === 'news' && (
+            <div className="sheet">
+              <div className="card news">
+                <h2>New in the jar!</h2>
+                <ul className="special-list">
+                  <li>
+                    <SlimeIcon tier={-2} size={36} />
+                    <span>
+                      <b>Special slimes</b> Rainbow, Bomb and Frozen drop in every game.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="news-icon">{Icon.jar}</span>
+                    <span>
+                      <b>Helpers and jars</b> Shake, Pop and Hold under the jar. New jars open as you score.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="news-icon">{Icon.club}</span>
+                    <span>
+                      <b>Jar club</b> A private board for family and friends, with one short code.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="news-icon">{Icon.trophy}</span>
+                    <span>
+                      <b>Daily jar</b> The same slimes for everyone, one try a day.
+                    </span>
+                  </li>
+                  <li>
+                    <SlimeIcon tier={4} hat="top" size={36} />
+                    <span>
+                      <b>Slime book</b> Goals that unlock hats for your slimes.
+                    </span>
+                  </li>
+                </ul>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    store.set('slime.news', NEWS_VERSION);
+                    setPhase('home');
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          )}
+
+          {phase === 'records' && (
+            <div className="sheet">
+              <Records mine={playerName || null} stamp={saved} onClose={closeCard} />
+            </div>
+          )}
+          {phase === 'club' && (
+            <div className="sheet">
+              <Club club={club} mine={playerName || null} stamp={saved} onJoin={joinClub} onLeave={leaveClub} onClose={closeCard} />
+            </div>
+          )}
+          {phase === 'daily' && (
+            <div className="sheet">
+              <DailyCard played={dailyPlayed} club={club} mine={playerName || null} stamp={saved} onPlay={() => start(dayKey())} onClose={closeCard} />
+            </div>
+          )}
+          {phase === 'jars' && (
+            <div className="sheet">
+              <JarPicker jarId={jar.id} lifetimePoints={life.points} onPick={pickJar} onClose={closeCard} />
+            </div>
+          )}
+          {phase === 'book' && (
+            <div className="sheet">
+              <SlimeBook discovered={discovered} life={life} hat={wornHat} onHat={pickHat} onClose={closeCard} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
