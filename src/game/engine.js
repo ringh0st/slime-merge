@@ -15,9 +15,11 @@ const DROP_Y = 48;
 const STEP = 1000 / 120;
 const OVER_MS = 2600;
 const COMBO_MS = 1200;
-// Special pieces: none in the first drops, then about one drop in eleven.
-const SPECIALS_FROM_DROP = 8;
-const SPECIAL_CHANCE = 0.09;
+// Special pieces: none in the first few drops, one for sure early on (so every game meets them), then about one
+// drop in seven.
+const SPECIALS_FROM_DROP = 5;
+const FIRST_SPECIAL_BY_DROP = 7;
+const SPECIAL_CHANCE = 0.14;
 const BOMB_FUSE_MS = 900;
 const BOMB_REACH = 72;
 // Helpers: the player starts with one Shake and one Pop, earns more by scoring, and holds at most three of each.
@@ -120,7 +122,9 @@ export class Game {
   pickPiece() {
     // Rocks start showing up after a while, then every 7th drop.
     if (this.drops >= 18 && this.drops % 7 === 0) return { tier: ROCK_TIER };
-    if (this.drops >= SPECIALS_FROM_DROP && this.rng() < SPECIAL_CHANCE) {
+    const isDue = !this.hadSpecial && this.drops >= FIRST_SPECIAL_BY_DROP;
+    if (this.drops >= SPECIALS_FROM_DROP && (this.rng() < SPECIAL_CHANCE || isDue)) {
+      this.hadSpecial = true;
       const pick = this.rng();
       if (pick < 0.4) return { tier: RAINBOW_TIER };
       if (pick < 0.7) return { tier: BOMB_TIER };
@@ -156,6 +160,7 @@ export class Game {
     this.next = { tier: this.pickTier() };
     this.held = null;
     this.canHold = true;
+    this.hadSpecial = false;
     this.helpers = { shake: 1, pop: 1 };
     this.charge = 0;
     this.nextBubble = 2500;

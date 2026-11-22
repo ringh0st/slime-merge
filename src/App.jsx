@@ -33,6 +33,16 @@ function fitJar() {
   return { w: Math.round(W * s), h: Math.round(H * s) };
 }
 
+/** One line for each special piece, shown the first time it comes up. */
+const SPECIAL_NOTES = {
+  [-1]: 'Rock: cracks when a merge happens beside it.',
+  [-2]: 'Rainbow: merges with any slime it touches!',
+  [-3]: 'Bomb: pops everything close to it!',
+};
+const FROZEN_NOTE = 'Frozen: merge beside it to break the ice.';
+/** What the "What's new" card was last shown for; raise it to show the card again after a big update. */
+const NEWS_VERSION = 1;
+
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
 const Icon = {
@@ -84,7 +94,8 @@ export default function App() {
   const shakeRef = useRef(null);
   const gameRef = useRef(null);
 
-  const [phase, setPhase] = useState('menu');
+  // Players from before the big update first see what is new.
+  const [phase, setPhase] = useState(() => (store.get('slime.best', 0) > 0 && store.get('slime.news', 0) < NEWS_VERSION ? 'news' : 'menu'));
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() => store.get('slime.best', 0));
   const [next, setNext] = useState({ tier: 0 });
@@ -92,7 +103,11 @@ export default function App() {
   const [isPopping, setIsPopping] = useState(false);
   // What is kept between games: counts for the goals, the hat the slimes wear, the chosen jar, the club's code
   // and the daily jars played ({ [day]: score }).
-  const [life, setLife] = useState(() => ({ ...EMPTY_LIFE, ...store.get('slime.life', {}) }));
+  // A player from before the goals existed starts with their best score counted, not from zero.
+  const [life, setLife] = useState(() => {
+    const before = store.get('slime.best', 0);
+    return { ...EMPTY_LIFE, points: before, best: before, ...store.get('slime.life', {}) };
+  });
   const [hat, setHat] = useState(() => store.get('slime.hat', null));
   const [jarId, setJarId] = useState(() => store.get('slime.jar', 'classic'));
   const [club, setClub] = useState(() => store.get('slime.club', null));
@@ -100,6 +115,7 @@ export default function App() {
   // The daily jar's day while it is being played (null in a normal game).
   const [dailyRun, setDailyRun] = useState(null);
   const [passedBy, setPassedBy] = useState([]);
+  const [specialNote, setSpecialNote] = useState(null);
   const [combo, setCombo] = useState({ n: 0, id: 0 });
   const [danger, setDanger] = useState(0);
   const [discovered, setDiscovered] = useState(() => store.get('slime.discovered', 4));
@@ -169,7 +185,16 @@ export default function App() {
   useEffect(() => {
     const game = new Game(canvasRef.current, {
       onScore: setScore,
-      onNext: setNext,
+      onNext: (piece) => {
+        setNext(piece);
+        // The first time each special piece comes up, say what it does.
+        const kind = piece.frozen ? 'frozen' : SPECIAL_NOTES[piece.tier] ? String(piece.tier) : null;
+        const seen = store.get('slime.seenSpecials', []);
+        if (kind && !seen.includes(kind)) {
+          store.set('slime.seenSpecials', [...seen, kind]);
+          setSpecialNote({ piece, text: piece.frozen ? FROZEN_NOTE : SPECIAL_NOTES[piece.tier], id: performance.now() });
+        }
+      },
       onDanger: setDanger,
       onHelpers: setHelpers,
       onBoom: () => {
@@ -457,7 +482,13 @@ export default function App() {
             )}
             {isPopping && phase === 'play' && <div className="pop-hint">Tap a slime to pop it</div>}
             {dailyRun && isInGame && <div className="daily-tag">Daily jar</div>}
-            {toast && phase === 'play' && (
+            {specialNote && phase === 'play' && (
+              <div className="toast special" key={specialNote.id} onAnimationEnd={() => setSpecialNote(null)}>
+                <SlimeIcon tier={specialNote.piece.tier} frozen={specialNote.piece.frozen} size={30} />
+                <span>{specialNote.text}</span>
+              </div>
+            )}
+            {toast && phase === 'play' && !specialNote && (
               <div className="toast" key={toast.id} onAnimationEnd={() => setToast(null)}>
                 <SlimeIcon tier={toast.tier} size={30} />
                 <span>
@@ -532,6 +563,55 @@ export default function App() {
             </div>
           )}
 
+          {phase === 'news' && (
+            <div className="overlay">
+              <div className="card news">
+                <h2>New in the jar!</h2>
+                <ul className="special-list">
+                  <li>
+                    <SlimeIcon tier={-2} size={36} />
+                    <span>
+                      <b>Special slimes</b> Rainbow, Bomb and Frozen drop in every game.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="news-icon">{Icon.jar}</span>
+                    <span>
+                      <b>Helpers and jars</b> Shake, Pop and Hold under the jar. New jars open as you score.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="news-icon">{Icon.club}</span>
+                    <span>
+                      <b>Jar club</b> A private board for family and friends, with one short code.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="news-icon">{Icon.trophy}</span>
+                    <span>
+                      <b>Daily jar</b> The same slimes for everyone, one try a day.
+                    </span>
+                  </li>
+                  <li>
+                    <SlimeIcon tier={4} hat="top" size={36} />
+                    <span>
+                      <b>Slime book</b> Goals that unlock hats for your slimes.
+                    </span>
+                  </li>
+                </ul>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    store.set('slime.news', NEWS_VERSION);
+                    setPhase('menu');
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          )}
+
           {phase === 'paused' && (
             <div className="overlay">
               <div className="card small">
@@ -543,12 +623,26 @@ export default function App() {
                   className="btn ghost"
                   onClick={() => {
                     gameRef.current.setPaused(false);
-                    if (dailyRun) setPhase('menu');
-                    else start(null);
+                    if (dailyRun) {
+                      gameRef.current.reset('demo');
+                      setPhase('menu');
+                    } else start(null);
                   }}
                 >
                   {dailyRun ? 'Leave the daily jar' : 'Restart'}
                 </button>
+                {!dailyRun && (
+                  <button
+                    className="btn ghost"
+                    onClick={() => {
+                      gameRef.current.setPaused(false);
+                      gameRef.current.reset('demo');
+                      setPhase('menu');
+                    }}
+                  >
+                    Menu
+                  </button>
+                )}
               </div>
             </div>
           )}

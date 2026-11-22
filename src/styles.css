@@ -1333,3 +1333,30 @@ h2 {
 .goal-list li.done .meter span {
   background: #5fd39a;
 }
+
+/* The "What's new" card and the first-time note for a special piece. */
+.card.news {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.news-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--accent);
+}
+.toast.special {
+  animation-duration: 4.2s;
+  width: max-content;
+  max-width: 92%;
+  border-radius: 20px;
+  white-space: normal;
+  text-align: left;
+  font-weight: 600;
+}
