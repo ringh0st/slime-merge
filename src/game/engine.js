@@ -415,6 +415,16 @@ export class Game {
     }
   }
 
+  /** In a fight: rocks sent by the other player fall into the jar. */
+  addRocks(count) {
+    if (this.mode !== 'play' || this.over) return;
+    for (let i = 0; i < count; i++) {
+      const rock = this.spawn(ROCK_TIER, 40 + Math.random() * (W - 80), -30 - i * 60, { x: 0, y: 2 });
+      rock.plugin.jv = -1;
+    }
+    sfx.rock();
+  }
+
   /** A merge right beside a frozen slime breaks its ice, so it can merge again. */
   thawNear(x, y, R) {
     for (const b of this.bodies()) {

@@ -12,7 +12,8 @@ const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /**
  * The home page: the game's front door. Play is the big button; with it the player's nickname, today's daily jar,
- * three doors (jars, club, slime book) that show where the player stands, and the top three players of all time.
+ * a live fight with a friend, three doors (jars, club, slime book) that show where the player stands, and the top
+ * three players of all time.
  * @param open opens one of the pages: 'daily' | 'jars' | 'club' | 'book' | 'records'
  */
 export default function Home({ best, life, jar, hat, club, discovered, dailyPlayed, passedBy, name, onName, stamp, onPlay, open }) {
@@ -60,6 +61,11 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
           {jar.name}
           {best > 0 ? ` · Best ${best.toLocaleString()}` : ''}
         </small>
+      </button>
+
+      <button className="btn alt fight-btn" onClick={() => open('fight')}>
+        Fight a friend
+        <small>Live, with a code · 2 minutes</small>
       </button>
 
       <button className="home-daily" onClick={() => open('daily')}>

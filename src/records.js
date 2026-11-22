@@ -1,8 +1,9 @@
 // Records shared by everyone: scores saved under a name, best of the week, the month and all time.
 // The address and key below are public by design; the database only allows the two functions used here
 // (supabase/slime_records.sql).
-const API_URL = 'https://wapxwfpgrijxaclsbwkq.supabase.co/rest/v1/rpc/';
-const API_KEY = 'sb_publishable_P96gX4pjrmkFtvrbHGQdRg_6K1eXEtc';
+export const SERVER_URL = 'https://wapxwfpgrijxaclsbwkq.supabase.co';
+const API_URL = `${SERVER_URL}/rest/v1/rpc/`;
+export const API_KEY = 'sb_publishable_P96gX4pjrmkFtvrbHGQdRg_6K1eXEtc';
 
 export const PERIODS = [
   { id: 'all', label: 'All time' },

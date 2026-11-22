@@ -11,6 +11,9 @@ import JarPicker from './components/JarPicker.jsx';
 import SlimeBook from './components/SlimeBook.jsx';
 import HelperBar from './components/HelperBar.jsx';
 import Home from './components/Home.jsx';
+import Fight from './components/Fight.jsx';
+import { useFight } from './useFight.js';
+import { rocksForCombo } from './fight.js';
 import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import { haptic } from './native.js';
@@ -45,7 +48,7 @@ const FROZEN_NOTE = 'Frozen: merge beside it to break the ice.';
 const NEWS_VERSION = 1;
 
 /** The screens that cover the jar. */
-const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily'];
+const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'fight'];
 
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
@@ -124,6 +127,10 @@ export default function App() {
   // The daily jar's day while it is being played (null in a normal game).
   const [dailyRun, setDailyRun] = useState(null);
   const [passedBy, setPassedBy] = useState([]);
+  // A live fight is being played in the jar.
+  const [isFighting, setIsFighting] = useState(false);
+  const isFightingRef = useRef(false);
+  const [clock, setClock] = useState(() => Date.now());
   const [specialNote, setSpecialNote] = useState(null);
   const [combo, setCombo] = useState({ n: 0, id: 0 });
   const [danger, setDanger] = useState(0);
@@ -165,13 +172,43 @@ export default function App() {
   // A jar or hat that isn't unlocked (cleared storage, a copied save) falls back to the plain one.
   const jar = isJarOpen(jarById(jarId), life.points) ? jarById(jarId) : JARS[0];
   const wornHat = unlockedHats(life).includes(hat) ? hat : null;
+  const fightApi = useFight(
+    { name: playerName, hat: wornHat },
+    {
+      onGo: (seed) => start(null, seed),
+      onRocks: (count) => gameRef.current.addRocks(count),
+      onFinish: () => {
+        const game = gameRef.current;
+        if (game.mode === 'play' && !game.over) game.gameOver(true);
+        isFightingRef.current = false;
+        setIsFighting(false);
+        setPhase('fight');
+      },
+    },
+  );
+  const fightRef = useRef(fightApi);
+  useEffect(() => {
+    fightRef.current = fightApi;
+  });
+  const { fight } = fightApi;
+  // The other player sees my score and how full my jar is; the fight's clock ticks on screen.
+  useEffect(() => {
+    if (isFighting) fightApi.report(score, danger);
+  }, [isFighting, score, danger]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!isFighting) return undefined;
+    const timer = setInterval(() => setClock(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [isFighting]);
+
   // The daily jar is always the classic one, so it is the same for everyone.
-  const shownJar = dailyRun ? JARS[0] : jar;
+  const shownJar = dailyRun || isFighting ? JARS[0] : jar;
   // A player with a nickname never types it again: each game's score saves by itself when the game ends (or is
   // left), and a score waiting for a nickname saves the moment one is picked.
   const savedResult = useRef(null);
   useEffect(() => {
-    if (!playerName || result.score < 1 || savedResult.current === result) return;
+    // A fight's score isn't a record: rocks from the other player are part of it.
+    if (!playerName || result.score < 1 || result.fight || savedResult.current === result) return;
     savedResult.current = result;
     setAutoSave('saving');
     saveScore(playerName, result.score, { club, daily: result.daily, top: result.top, hat: wornHat })
@@ -255,6 +292,8 @@ export default function App() {
       },
       onMerge: (tier, n) => {
         if (n > 1) setCombo({ n, id: performance.now() });
+        // In a fight a combo drops rocks into the other player's jar.
+        if (isFightingRef.current) fightRef.current.attack(rocksForCombo(n));
         haptic(tier >= 6 ? 'heavy' : n > 1 ? 'medium' : 'light');
         if (tier >= 6 && !reduceMotion) {
           shakeRef.current?.animate(
@@ -301,11 +340,15 @@ export default function App() {
           setBest(finalScore);
           store.set('slime.best', finalScore);
         }
-        setResult({ score: finalScore, top, newBest, newHats, newJars, daily: day });
+        const isFight = isFightingRef.current;
+        setResult({ score: finalScore, top, newBest, newHats, newJars, daily: day, fight: isFight });
         setSaved(false);
         setAutoSave(null);
         // A game left from the pause card goes where the player asked, not to the game-over card.
-        if (!wasLeft) setTimeout(() => setPhase('over'), 700);
+        if (isFight) {
+          // The fight page shows who won; my overflow tells the other player they did.
+          if (!wasLeft) fightRef.current.lost(finalScore);
+        } else if (!wasLeft) setTimeout(() => setPhase('over'), 700);
       },
     });
     gameRef.current = game;
@@ -367,14 +410,17 @@ export default function App() {
     return () => window.removeEventListener('pointermove', onMove);
   }, []);
 
-  /** Start a game: a normal one in the chosen jar, or (with a day) that day's jar. */
+  /** Start a game: a normal one in the chosen jar, that day's jar (with a day), or a fight (with its seed). */
   const start = useCallback(
-    (day = null) => {
+    (day = null, fightSeed = null) => {
       sfx.unlock();
       sfx.click();
       setDailyRun(day);
-      gameRef.current.setJar(day ? JARS[0] : jar);
-      gameRef.current.start(day ? `daily-${day}` : null);
+      setIsFighting(Boolean(fightSeed));
+      isFightingRef.current = Boolean(fightSeed);
+      // The daily jar and a fight are always in the classic jar, so they are the same for everyone.
+      gameRef.current.setJar(day || fightSeed ? JARS[0] : jar);
+      gameRef.current.start(fightSeed ?? (day ? `daily-${day}` : null));
       setScore(0);
       setDanger(0);
       setCombo({ n: 0, id: 0 });
@@ -387,6 +433,8 @@ export default function App() {
   const playAgain = () => start(null);
 
   const togglePause = useCallback(() => {
+    // A live fight can't be paused.
+    if (isFightingRef.current) return;
     setPhase((p) => {
       if (p === 'play') {
         gameRef.current.setPaused(true);
@@ -459,6 +507,10 @@ export default function App() {
       leaveGame();
     }
     if (isInGame || phase === 'over') gameRef.current.reset('demo');
+    // Leaving a fight (also from its page) tells the other player.
+    if (fight.status !== 'idle') fightApi.leave();
+    isFightingRef.current = false;
+    setIsFighting(false);
     setPhase('home');
   };
   const isPage = PAGES.includes(phase);
@@ -507,7 +559,7 @@ export default function App() {
               {Icon.home}
             </button>
           )}
-          {(phase === 'play' || phase === 'paused') && (
+          {(phase === 'play' || phase === 'paused') && !isFighting && (
             <button className="icon-btn" onClick={togglePause} aria-label="Pause">
               {Icon.pause}
             </button>
@@ -554,10 +606,20 @@ export default function App() {
           <SlimeIcon tier={next.tier} frozen={next.frozen} size={40} className="bob" />
           <span className="next-name">{isInGame ? pieceName(next) : '—'}</span>
         </div>
-        <div className="pill stat right">
-          <span className="label">Best</span>
-          <span className="value">{best}</span>
-        </div>
+        {isFighting && fight.foe ? (
+          <div className="pill stat right foe" aria-label={`${fight.foe.name}: ${fight.foe.score} points`}>
+            <span className="label">{fight.foe.name}</span>
+            <span className="value">{fight.foe.score}</span>
+            <span className="foe-danger" aria-hidden="true">
+              <span style={{ width: `${fight.foe.danger * 100}%` }} />
+            </span>
+          </div>
+        ) : (
+          <div className="pill stat right">
+            <span className="label">Best</span>
+            <span className="value">{best}</span>
+          </div>
+        )}
       </section>
 
       <main className="stage">
@@ -586,6 +648,11 @@ export default function App() {
             )}
             {isPopping && phase === 'play' && <div className="pop-hint">Tap a slime to pop it</div>}
             {dailyRun && isInGame && <div className="daily-tag">Daily jar</div>}
+            {isFighting && isInGame && (
+              <div className="daily-tag" role="timer">
+                {Math.max(0, Math.ceil((fight.endsAt - clock) / 1000))} s
+              </div>
+            )}
             {specialNote && phase === 'play' && (
               <div className="toast special" key={specialNote.id} onAnimationEnd={() => setSpecialNote(null)}>
                 <SlimeIcon tier={specialNote.piece.tier} frozen={specialNote.piece.frozen} size={30} />
@@ -814,6 +881,18 @@ export default function App() {
           {phase === 'daily' && (
             <div className="sheet">
               <DailyCard played={dailyPlayed} club={club} mine={playerName || null} stamp={saved} onPlay={() => start(dayKey())} onClose={closeCard} />
+            </div>
+          )}
+          {phase === 'fight' && (
+            <div className="sheet">
+              <Fight
+                fight={fight}
+                me={{ name: playerName, hat: wornHat }}
+                onHost={fightApi.host}
+                onJoin={fightApi.join}
+                onAgain={fightApi.again}
+                onLeave={goHome}
+              />
             </div>
           )}
           {phase === 'jars' && (
