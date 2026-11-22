@@ -1886,3 +1886,33 @@ button.chip {
   text-overflow: ellipsis;
   font-size: 10px;
 }
+
+/* A fight: the other player's jar on top (live), mine under it. */
+.stage-inner.is-duel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.duel-name {
+  align-self: flex-start;
+  margin: 0 0 0 6px;
+  font: 700 12px 'Fredoka', system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.duel-name.foe {
+  color: #ff5d8f;
+}
+.jar.ghost {
+  flex: none;
+  margin-bottom: 5px;
+  box-shadow:
+    0 0 0 3px #ff9cc0,
+    0 20px 30px -20px var(--shadow);
+}
+.stage-inner.is-duel .tilt {
+  transform: none;
+}

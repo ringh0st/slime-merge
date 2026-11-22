@@ -9,11 +9,14 @@ const SILENCE_MS = 9000;
  * A live fight with one other player (fight.js has the messages).
  * status: 'idle' → 'connecting' → 'waiting' (for the other player) → 'countdown' → 'playing' → 'done'.
  * @param me { name, hat } shown to the other player
- * @param handlers { onGo(seed), onRocks(count), onFinish() }: start my game, drop rocks into it, stop it
+ * @param handlers { onGo(seed), onRocks(count), onFinish(), snapshot() }: start my game, drop rocks into it,
+ *   stop it, and what my jar looks like right now
  */
 export function useFight(me, handlers) {
   const [fight, setFight] = useState(IDLE);
   const link = useRef(null);
+  // The other player's jar as last heard (see Game.snapshot).
+  const foeJar = useRef(null);
   const live = useRef({ ...IDLE, id: Math.random().toString(36).slice(2), score: 0, danger: 0, heard: 0, sent: 0, seed: null });
   const h = useRef(handlers);
   const who = useRef(me);
@@ -36,6 +39,7 @@ export function useFight(me, handlers) {
     live.current.score = 0;
     live.current.danger = 0;
     live.current.heard = startAt;
+    foeJar.current = null;
     live.current.foeFinal = null;
     live.current.myFinal = null;
     set({ status: 'countdown', startAt, endsAt: startAt + FIGHT_MS, outcome: null, reason: null, wantsAgain: false, foeWantsAgain: false, myScore: 0, foe: { ...live.current.foe, score: 0, danger: 0 } });
@@ -64,7 +68,11 @@ export function useFight(me, handlers) {
       set({ status: 'idle', problem: 'That fight already has two players.' });
       leaveQuietly();
     } else if (m.t === 'start' && !s.isHost) begin(m.seed, m.delay);
-    else if (m.t === 'state' && s.foe) set({ foe: { ...s.foe, score: m.score, danger: m.danger } });
+    else if (m.t === 'state' && s.foe) {
+      // Their jar is drawn straight from this (GhostJar reads it every frame); only the numbers go through React.
+      foeJar.current = m.jar ?? null;
+      if (m.score !== s.foe.score || m.danger !== s.foe.danger) set({ foe: { ...s.foe, score: m.score, danger: m.danger } });
+    }
     else if (m.t === 'attack' && s.status === 'playing') h.current.onRocks(m.n);
     else if (m.t === 'over' && s.status === 'playing') {
       set({ foe: { ...s.foe, score: m.score } });
@@ -114,13 +122,16 @@ export function useFight(me, handlers) {
       const s = live.current;
       const now = Date.now();
       // A guest keeps saying hello until the host answers (the host may have connected a moment later).
-      if (s.status === 'waiting' && !s.isHost && !s.foe) hello();
+      if (s.status === 'waiting' && !s.isHost && !s.foe && now - (s.helloAt ?? 0) > 500) {
+        s.helloAt = now;
+        hello();
+      }
       if (s.status === 'countdown' && now >= s.startAt) {
         set({ status: 'playing' });
         h.current.onGo(s.seed);
       }
       if (s.status !== 'playing') return;
-      link.current?.send({ t: 'state', score: s.score, danger: s.danger });
+      link.current?.send({ t: 'state', score: s.score, danger: s.danger, jar: h.current.snapshot() });
       if (now >= s.endsAt && s.myFinal == null) {
         s.myFinal = s.score;
         link.current?.send({ t: 'final', score: s.score });
@@ -129,7 +140,7 @@ export function useFight(me, handlers) {
         // Their last word never came: go by the last score we saw.
         finish(outcomeOf(s.myFinal, s.foe?.score ?? 0), 'time');
       } else if (now - s.heard > SILENCE_MS) finish('win', 'left');
-    }, 500);
+    }, 200);
     return () => clearInterval(timer);
   }, [fight.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -137,6 +148,7 @@ export function useFight(me, handlers) {
 
   return {
     fight,
+    foeJar,
     host: () => connect(newFightCode(), true),
     join: (code) => connect(code, false),
     /** My game reports how it's going. */

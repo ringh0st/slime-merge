@@ -47,7 +47,7 @@ export default function HelperBar({ helpers, isPopping, onShake, onPop, onHold }
           {ART.pop}
           <span>
             Pop
-            <small>remove one</small>
+            <small>pop one</small>
           </span>
           <i aria-hidden="true">{helpers.pop}</i>
         </button>
@@ -60,7 +60,7 @@ export default function HelperBar({ helpers, isPopping, onShake, onPop, onHold }
           {helpers.held ? <SlimeIcon tier={helpers.held.tier} frozen={helpers.held.frozen} size={28} /> : ART.hold}
           <span>
             {helpers.held ? 'Swap' : 'Hold'}
-            <small>{helpers.held ? 'use saved one' : 'save for later'}</small>
+            <small>{helpers.held ? 'use it now' : 'for later'}</small>
           </span>
         </button>
       </div>

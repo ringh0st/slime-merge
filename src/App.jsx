@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Game, W, H } from './game/engine.js';
+import { Game, W, H, FIGHT_SHAPE } from './game/engine.js';
 import { TIERS, pieceName } from './game/tiers.js';
 import { JARS, isJarOpen, jarById } from './game/jars.js';
 import { EMPTY_LIFE, lifeAfterGame, unlockedHats } from './game/goals.js';
@@ -12,6 +12,7 @@ import SlimeBook from './components/SlimeBook.jsx';
 import HelperBar from './components/HelperBar.jsx';
 import Home from './components/Home.jsx';
 import Fight from './components/Fight.jsx';
+import GhostJar from './components/GhostJar.jsx';
 import { useFight } from './useFight.js';
 import { rocksForCombo } from './fight.js';
 import SaveScore from './components/SaveScore.jsx';
@@ -177,9 +178,12 @@ export default function App() {
     {
       onGo: (seed) => start(null, seed),
       onRocks: (count) => gameRef.current.addRocks(count),
+      snapshot: () => gameRef.current.snapshot(),
       onFinish: () => {
         const game = gameRef.current;
         if (game.mode === 'play' && !game.over) game.gameOver(true);
+        game.setShape();
+        game.reset('demo');
         isFightingRef.current = false;
         setIsFighting(false);
         setPhase('fight');
@@ -190,7 +194,7 @@ export default function App() {
   useEffect(() => {
     fightRef.current = fightApi;
   });
-  const { fight } = fightApi;
+  const { fight, foeJar } = fightApi;
   // The other player sees my score and how full my jar is; the fight's clock ticks on screen.
   useEffect(() => {
     if (isFighting) fightApi.report(score, danger);
@@ -201,6 +205,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [isFighting]);
 
+  const fightSecondsLeft = Math.max(0, Math.ceil((fight.endsAt - clock) / 1000));
   // The daily jar is always the classic one, so it is the same for everyone.
   const shownJar = dailyRun || isFighting ? JARS[0] : jar;
   // A player with a nickname never types it again: each game's score saves by itself when the game ends (or is
@@ -383,10 +388,14 @@ export default function App() {
     return () => window.removeEventListener('pointerdown', wake);
   }, []);
 
+  // In a fight two short jars share the room of the one tall jar (with a name over each).
+  const duelW = Math.min(size.w, Math.floor((size.h - 52) / ((2 * FIGHT_SHAPE.height) / W)));
+  const jarW = isFighting ? duelW : size.w;
+  const jarH = isFighting ? Math.round((duelW * FIGHT_SHAPE.height) / W) : size.h;
   useLayoutEffect(() => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    gameRef.current?.resize(size.w, size.h, dpr);
-  }, [size]);
+    gameRef.current?.resize(jarW, jarH, dpr);
+  }, [jarW, jarH]);
 
   useEffect(() => {
     const onResize = () => setSize(fitJar());
@@ -420,6 +429,8 @@ export default function App() {
       isFightingRef.current = Boolean(fightSeed);
       // The daily jar and a fight are always in the classic jar, so they are the same for everyone.
       gameRef.current.setJar(day || fightSeed ? JARS[0] : jar);
+      // A fight is played in a short jar with small slimes, so both jars fit on the screen.
+      gameRef.current.setShape(fightSeed ? FIGHT_SHAPE : undefined);
       gameRef.current.start(fightSeed ?? (day ? `daily-${day}` : null));
       setScore(0);
       setDanger(0);
@@ -484,7 +495,7 @@ export default function App() {
     if (isPopping) {
       // The Pop helper: this tap picks the piece to pop instead of dropping one.
       const rect = canvasRef.current.getBoundingClientRect();
-      if (gameRef.current.popAt(toLogical(e), ((e.clientY - rect.top) / rect.height) * H)) {
+      if (gameRef.current.popAt(toLogical(e), ((e.clientY - rect.top) / rect.height) * gameRef.current.h)) {
         haptic('medium');
         setIsPopping(false);
       }
@@ -509,6 +520,10 @@ export default function App() {
     if (isInGame || phase === 'over') gameRef.current.reset('demo');
     // Leaving a fight (also from its page) tells the other player.
     if (fight.status !== 'idle') fightApi.leave();
+    if (isFighting) {
+      gameRef.current.setShape();
+      gameRef.current.reset('demo');
+    }
     isFightingRef.current = false;
     setIsFighting(false);
     setPhase('home');
@@ -623,17 +638,26 @@ export default function App() {
       </section>
 
       <main className="stage">
-        <div className="stage-inner" style={{ width: size.w, height: size.h }}>
+        <div className={`stage-inner ${isFighting ? 'is-duel' : ''}`} style={{ width: size.w, height: size.h }}>
+          {isFighting && (
+            <>
+              <p className="duel-name foe">{fight.foe?.name ?? 'Friend'} · live</p>
+              <div className="jar jar-classic ghost" style={{ width: jarW, height: jarH }}>
+                <GhostJar jarRef={foeJar} hat={fight.foe?.hat} width={jarW} height={jarH} dangerY={Math.round(100 * FIGHT_SHAPE.scale)} />
+              </div>
+              <p className="duel-name">You</p>
+            </>
+          )}
         <div className="tilt" ref={tiltRef}>
-          <div className={`jar-back jar-${shownJar.id}`} style={{ width: size.w, height: size.h }} />
+          <div className={`jar-back jar-${shownJar.id}`} style={{ width: jarW, height: jarH }} />
           <div
             className={`jar jar-${shownJar.id} ${danger > 0.1 ? 'is-danger' : ''} ${isPopping ? 'is-popping' : ''}`}
-            style={{ width: size.w, height: size.h, '--danger': danger }}
+            style={{ width: jarW, height: jarH, '--danger': danger }}
           >
             <div className="jar-shake" ref={shakeRef}>
               <canvas
                 ref={canvasRef}
-                style={{ width: size.w, height: size.h }}
+                style={{ width: jarW, height: jarH }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -650,7 +674,7 @@ export default function App() {
             {dailyRun && isInGame && <div className="daily-tag">Daily jar</div>}
             {isFighting && isInGame && (
               <div className="daily-tag" role="timer">
-                {Math.max(0, Math.ceil((fight.endsAt - clock) / 1000))} s
+                {Math.floor(fightSecondsLeft / 60)}:{String(fightSecondsLeft % 60).padStart(2, '0')}
               </div>
             )}
             {specialNote && phase === 'play' && (
@@ -669,7 +693,7 @@ export default function App() {
             )}
 
           </div>
-          <div className="floor" style={{ width: size.w }} />
+          <div className="floor" style={{ width: jarW }} />
         </div>
           {phase === 'paused' && (
             <div className="overlay">

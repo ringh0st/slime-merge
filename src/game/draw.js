@@ -194,6 +194,7 @@ function fuse(ctx, r, t, lit) {
  * opts: j (squash), t (time ms), seed, lookX/lookY (-1..1), blink, worried, alpha, px (device px per unit),
  *       frozen (in an ice block), hat (a HAT_ART id; forceHat puts it on small slimes too, for icons),
  *       fuse (0 = not lit … 1 = about to go off)
+ *       fierce (a fight: lowered brows and a grin instead of the sweet face)
  */
 export function drawSlime(ctx, x, y, r, tier, opts = {}) {
   const { j = 0, t = 0, seed = 0, lookX = 0, lookY = 0, blink = false, worried = false, alpha = 1, px = 1 } = opts;
@@ -302,8 +303,22 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
     }
   }
 
+  // In a fight slimes mean business: brows slanting down toward the nose.
+  const fierce = opts.fierce && !rock && !bomb && !opts.frozen;
+  if (fierce) {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = Math.max(1.2, r * 0.075);
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(sx * (ex + er * 1.25), fy - er * 2.05);
+      ctx.lineTo(sx * (ex - er * 0.95), fy - er * 1.2);
+      ctx.stroke();
+    }
+    ctx.lineWidth = Math.max(1, r * 0.05);
+  }
+
   // Cheeks
-  if (!rock && !bomb && r >= 18) {
+  if (!rock && !bomb && !fierce && r >= 18) {
     ctx.fillStyle = 'rgba(255,110,150,0.35)';
     for (const sx of [-1, 1]) {
       ctx.beginPath();
@@ -323,6 +338,15 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
     ctx.moveTo(-er * 0.5, fy + er * 1.5);
     ctx.lineTo(er * 0.5, fy + er * 1.5);
     ctx.stroke();
+  } else if (fierce) {
+    // A wide grin with teeth.
+    ctx.beginPath();
+    ctx.moveTo(-er * 1.15, fy + er * 1.15);
+    ctx.quadraticCurveTo(0, fy + er * 2.5, er * 1.15, fy + er * 1.15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-er * 0.75, fy + er * 1.17, er * 1.5, er * 0.36);
   } else {
     ctx.beginPath();
     ctx.arc(0, fy + er * 0.8, er * 0.7, 0.15 * Math.PI, 0.85 * Math.PI);

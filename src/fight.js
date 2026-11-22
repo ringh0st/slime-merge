@@ -2,7 +2,8 @@
 // Realtime channel named after the code, and each message is a small object with a type `t`.
 //   hello  { id, name, hat, host }   who I am (sent on joining, and again in answer)
 //   start  { seed, delay }           the host: both begin in `delay` ms, with the same pieces
-//   state  { score, danger }         how I'm doing, a few times a second
+//   state  { score, danger, jar }    how I'm doing, five times a second; `jar` is every piece in my jar
+//                                    (Game.snapshot), so the other player can watch it live
 //   attack { n }                     my combo sends you n rocks
 //   over   { score }                 my jar overflowed: you win
 //   final  { score }                 time is up: my score
@@ -12,7 +13,7 @@
 import { RealtimeClient } from '@supabase/realtime-js';
 import { API_KEY, SERVER_URL } from './records.js';
 
-export const FIGHT_MS = 120000;
+export const FIGHT_MS = 180000;
 export const COUNTDOWN_MS = 3500;
 /** A combo of n merges sends n - 1 rocks, three at most. */
 export const rocksForCombo = (combo) => Math.max(0, Math.min(3, combo - 1));

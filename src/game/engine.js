@@ -22,6 +22,8 @@ const FIRST_SPECIAL_BY_DROP = 7;
 const SPECIAL_CHANCE = 0.14;
 const BOMB_FUSE_MS = 900;
 const BOMB_REACH = 72;
+/** The jar of a fight: shorter, with smaller slimes, so two jars fit on one screen (see setShape). */
+export const FIGHT_SHAPE = { height: 290, scale: 0.62 };
 // Helpers: the player starts with one Shake and one Pop, earns more by scoring, and holds at most three of each.
 const HELPER_COST = 350;
 const HELPER_CAP = 3;
@@ -36,6 +38,12 @@ export class Game {
     this.scale = 1;
     this.dpr = 1;
     this.jar = JARS[0];
+    // The jar's height, how big the slimes are in it, and where the danger line and the waiting slime sit.
+    this.h = H;
+    this.rScale = 1;
+    this.dangerY = DANGER_Y;
+    this.dropY = DROP_Y;
+    this.fierce = false;
     this.hat = null;
     this.rng = Math.random;
     this.engine = Engine.create({ gravity: { y: this.jar.gravity }, positionIterations: 8, velocityIterations: 6 });
@@ -78,9 +86,9 @@ export class Game {
     const T = 100;
     const opts = { isStatic: true, friction: 0.5, restitution: 0.1 };
     this.walls = [
-      Bodies.rectangle(W / 2, H + T / 2, W + T * 2, T, opts),
-      Bodies.rectangle(-T / 2, H / 2 - H, T, H * 3, opts),
-      Bodies.rectangle(W + T / 2, H / 2 - H, T, H * 3, opts),
+      Bodies.rectangle(W / 2, this.h + T / 2, W + T * 2, T, opts),
+      Bodies.rectangle(-T / 2, this.h / 2 - H, T, H * 3, opts),
+      Bodies.rectangle(W + T / 2, this.h / 2 - H, T, H * 3, opts),
     ];
     if (this.jar.isRound) {
       // A round bottom: short flat pieces along a half circle as wide as the jar.
@@ -88,7 +96,7 @@ export class Game {
       const N = 18;
       for (let i = 0; i < N; i++) {
         const a = ((i + 0.5) / N) * Math.PI;
-        const piece = Bodies.rectangle(R + Math.cos(a) * (R + 20), H - R + Math.sin(a) * (R + 20), 40, (Math.PI * R) / N + 10, opts);
+        const piece = Bodies.rectangle(R + Math.cos(a) * (R + 20), this.h - R + Math.sin(a) * (R + 20), 40, (Math.PI * R) / N + 10, opts);
         Body.setAngle(piece, a);
         this.walls.push(piece);
       }
@@ -101,6 +109,34 @@ export class Game {
     this.jar = jar;
     this.engine.gravity.y = jar.gravity;
     this.buildWalls();
+  }
+
+  /**
+   * The jar's shape (only between games): the normal tall jar, or FIGHT_SHAPE. A smaller scale shrinks every piece
+   * and moves the danger line and the waiting slime up to match.
+   */
+  setShape({ height = H, scale = 1 } = {}) {
+    this.h = height;
+    this.rScale = scale;
+    this.dangerY = Math.round(DANGER_Y * scale);
+    this.dropY = Math.round(DROP_Y * scale);
+    this.fierce = scale < 1;
+    this.buildWalls();
+  }
+
+  /** How big a piece is in this jar. */
+  radius(tier) {
+    return tierInfo(tier).r * this.rScale;
+  }
+
+  /** What the other player of a fight needs to draw this jar: every piece, and the one waiting to drop. */
+  snapshot() {
+    return {
+      a: Math.round(this.clampAim()),
+      c: this.current.tier,
+      f: this.current.frozen ? 1 : 0,
+      b: this.bodies().map((b) => [b.id, b.plugin.tier, Math.round(b.position.x), Math.round(b.position.y), b.plugin.frozen ? 1 : 0]),
+    };
   }
 
   /** The hat every bigger slime wears (null for none). */
@@ -261,7 +297,7 @@ export class Game {
   }
 
   get heldR() {
-    return tierInfo(this.current.tier).r;
+    return this.radius(this.current.tier);
   }
 
   clampAim() {
@@ -270,7 +306,7 @@ export class Game {
   }
 
   spawn(tier, x, y, vel, frozen = false) {
-    const r = tierInfo(tier).r;
+    const r = this.radius(tier);
     const b = Bodies.circle(x, y, r, {
       restitution: this.jar.bounce,
       friction: this.jar.friction,
@@ -298,7 +334,7 @@ export class Game {
 
   drop() {
     if (this.mode !== 'play' || !this.canDrop || this.over || this.paused) return false;
-    const b = this.spawn(this.current.tier, this.clampAim(), DROP_Y, { x: 0, y: 1 }, Boolean(this.current.frozen));
+    const b = this.spawn(this.current.tier, this.clampAim(), this.dropY, { x: 0, y: 1 }, Boolean(this.current.frozen));
     b.plugin.jv = -1.4; // stretch as it falls
     this.drops++;
     this.canDrop = false;
@@ -364,22 +400,22 @@ export class Game {
       let gained;
       if (t === TIERS.length - 1) {
         // Two kings: a royal explosion and they vanish.
-        this.burst(x, y, color, 40, TIERS[t].r);
-        this.burst(x, y, '#FFE27A', 30, TIERS[t].r);
-        this.ring(x, y, TIERS[t].r * 1.4, '#FFE27A');
+        this.burst(x, y, color, 40, this.radius(t));
+        this.burst(x, y, '#FFE27A', 30, this.radius(t));
+        this.ring(x, y, this.radius(t) * 1.4, '#FFE27A');
         gained = 250;
-        this.crackRocks(x, y, TIERS[t].r * 1.5);
-        this.thawNear(x, y, TIERS[t].r * 1.5);
+        this.crackRocks(x, y, this.radius(t) * 1.5);
+        this.thawNear(x, y, this.radius(t) * 1.5);
         if (play) sfx.king();
       } else {
         const nt = t + 1;
         const nb = this.spawn(nt, x, y, { x: vx * 0.5, y: Math.min(vy, 0) - 1.5 });
         nb.plugin.j = -0.2;
-        this.burst(x, y, color, 10 + t * 2, TIERS[t].r);
-        this.ring(x, y, TIERS[nt].r, TIERS[nt].color);
+        this.burst(x, y, color, 10 + t * 2, this.radius(t));
+        this.ring(x, y, this.radius(nt), TIERS[nt].color);
         gained = POINTS[nt];
-        this.crackRocks(x, y, TIERS[nt].r);
-        this.thawNear(x, y, TIERS[nt].r);
+        this.crackRocks(x, y, this.radius(nt));
+        this.thawNear(x, y, this.radius(nt));
         if (play && nt === TIERS.length - 1) this.run.kings++;
         if (play && nt > this.runMax) {
           this.runMax = nt;
@@ -419,7 +455,7 @@ export class Game {
   addRocks(count) {
     if (this.mode !== 'play' || this.over) return;
     for (let i = 0; i < count; i++) {
-      const rock = this.spawn(ROCK_TIER, 40 + Math.random() * (W - 80), -30 - i * 60, { x: 0, y: 2 });
+      const rock = this.spawn(ROCK_TIER, 40 + Math.random() * (W - 80), -20 - i * 40, { x: 0, y: 2 });
       rock.plugin.jv = -1;
     }
     sfx.rock();
@@ -444,17 +480,18 @@ export class Game {
     Composite.remove(this.world, bomb);
     this.burst(x, y, '#FFB45E', 34, 30);
     this.burst(x, y, '#4A4160', 16, 20);
-    this.ring(x, y, BOMB_REACH, '#FFB45E');
+    const reach = BOMB_REACH * this.rScale;
+    this.ring(x, y, reach, '#FFB45E');
     let popped = 0;
     for (const b of this.bodies()) {
       const d = Math.hypot(b.position.x - x, b.position.y - y);
-      if (d - b.plugin.r < BOMB_REACH) {
+      if (d - b.plugin.r < reach) {
         Composite.remove(this.world, b);
         this.burst(b.position.x, b.position.y, b.plugin.frozen ? ICE : tierInfo(b.plugin.tier).color, 10, b.plugin.r);
         if (b.plugin.kind === 'rock') this.run.rocks++;
         popped++;
-      } else if (d < BOMB_REACH * 3) {
-        const push = (1 - d / (BOMB_REACH * 3)) * 9;
+      } else if (d < reach * 3) {
+        const push = (1 - d / (reach * 3)) * 9;
         Body.setVelocity(b, { x: b.velocity.x + ((b.position.x - x) / d) * push, y: b.velocity.y + ((b.position.y - y) / d) * push });
       }
     }
@@ -542,7 +579,7 @@ export class Game {
       this.nextBubble -= dt;
       if (this.nextBubble <= 0) {
         this.nextBubble = 2200 + Math.random() * 1800;
-        const small = list.filter((b) => b.plugin.r < 40 && b.position.y > H * 0.5);
+        const small = list.filter((b) => b.plugin.r < 40 && b.position.y > this.h * 0.5);
         const b = small[Math.floor(Math.random() * small.length)];
         if (b) {
           Body.setVelocity(b, { x: b.velocity.x + (Math.random() - 0.5) * 3, y: -7 - Math.random() * 3 });
@@ -556,7 +593,7 @@ export class Game {
       let high = false;
       for (const b of list) {
         const p = b.plugin;
-        if (this.simTime - p.born > 1500 && !p.merging && b.position.y - p.r < DANGER_Y) high = true;
+        if (this.simTime - p.born > 1500 && !p.merging && b.position.y - p.r < this.dangerY) high = true;
       }
       this.danger = high ? this.danger + dt : Math.max(0, this.danger - dt * 1.5);
       const lvl = Math.min(1, this.danger / OVER_MS);
@@ -615,8 +652,8 @@ export class Game {
           ? `rgba(255,70,110,${0.4 + 0.5 * lvl * (0.5 + 0.5 * Math.sin(now * 0.02))})`
           : 'rgba(130,110,190,0.28)';
       ctx.beginPath();
-      ctx.moveTo(14, DANGER_Y);
-      ctx.lineTo(W - 14, DANGER_Y);
+      ctx.moveTo(14, this.dangerY);
+      ctx.lineTo(W - 14, this.dangerY);
       ctx.stroke();
       ctx.restore();
     }
@@ -625,18 +662,19 @@ export class Game {
     if (play && !this.over) {
       const x = this.clampAim();
       const r = this.heldR;
-      const g = ctx.createLinearGradient(0, DROP_Y, 0, H);
+      const g = ctx.createLinearGradient(0, this.dropY, 0, this.h);
       g.addColorStop(0, 'rgba(255,255,255,0.55)');
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(x - 1, DROP_Y + r, 2, H);
-      drawSlime(ctx, x, DROP_Y + Math.sin(now * 0.004) * 2, r, this.current.tier, {
+      ctx.fillRect(x - 1, this.dropY + r, 2, this.h);
+      drawSlime(ctx, x, this.dropY + Math.sin(now * 0.004) * 2, r, this.current.tier, {
         t: now,
         alpha: this.canDrop ? 1 : 0.35,
         px: k,
         lookY: 1,
         frozen: this.current.frozen,
         hat: this.hat,
+        fierce: this.fierce,
       });
     }
 
@@ -654,10 +692,11 @@ export class Game {
         lookX: Math.max(-1, Math.min(1, (this.aimX - b.position.x) / 150)),
         lookY: -0.3,
         blink: blink && !p.dead,
-        worried: p.dead || (lvl > 0.15 && b.position.y < DANGER_Y + 140),
+        worried: p.dead || (lvl > 0.15 && b.position.y < this.dangerY + 140 * this.rScale),
         px: k,
         frozen: p.frozen,
         hat: this.hat,
+        fierce: this.fierce,
         // A lit fuse flashes faster and faster.
         fuse: p.fuseAt ? 1 - Math.max(0, p.fuseAt - this.simTime) / BOMB_FUSE_MS : 0,
       });

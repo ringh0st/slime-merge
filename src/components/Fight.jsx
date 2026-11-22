@@ -66,7 +66,7 @@ export default function Fight({ fight, me, onHost, onJoin, onAgain, onLeave }) {
     return (
       <div className="card fight">
         <h2>Fight a friend</h2>
-        <p className="sub">Two jars, the same slimes, two minutes. Combos drop rocks into your friend’s jar!</p>
+        <p className="sub">Two jars, the same slimes, three minutes. Watch your friend play live: combos drop rocks into their jar!</p>
         <button className="btn" onClick={onHost}>
           Start a fight
         </button>

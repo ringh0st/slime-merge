@@ -65,7 +65,7 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
 
       <button className="btn alt fight-btn" onClick={() => open('fight')}>
         Fight a friend
-        <small>Live, with a code · 2 minutes</small>
+        <small>Live, with a code · 3 minutes</small>
       </button>
 
       <button className="home-daily" onClick={() => open('daily')}>
