@@ -2,6 +2,7 @@ import SlimeIcon from './SlimeIcon.jsx';
 import Nickname from './Nickname.jsx';
 import RecordList from './RecordList.jsx';
 import { loadRecords } from '../records.js';
+import { isInstalled } from '../install.js';
 import { TIERS } from '../game/tiers.js';
 import { JARS, isJarOpen } from '../game/jars.js';
 import { unlockedHats } from '../game/goals.js';
@@ -121,6 +122,15 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
         </div>
         <RecordList load={() => loadRecords('all')} watch={stamp} mine={name || null} limit={3} />
       </section>
+      {!isInstalled() && (
+        <button className="install-chip" onClick={() => open('install')}>
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="6" y="2.5" width="12" height="19" rx="3" />
+            <path d="M12 8v6M9 11h6" />
+          </svg>
+          Add to Home Screen
+        </button>
+      )}
       <p className="hint">Tap or click to drop · ← → and Space work too</p>
     </div>
   );

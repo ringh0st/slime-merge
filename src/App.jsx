@@ -12,6 +12,7 @@ import SlimeBook from './components/SlimeBook.jsx';
 import HelperBar from './components/HelperBar.jsx';
 import Home from './components/Home.jsx';
 import Fight from './components/Fight.jsx';
+import InstallHelp from './components/InstallHelp.jsx';
 import GhostJar from './components/GhostJar.jsx';
 import { useFight } from './useFight.js';
 import { rocksForCombo } from './fight.js';
@@ -49,7 +50,7 @@ const FROZEN_NOTE = 'Frozen: merge beside it to break the ice.';
 const NEWS_VERSION = 1;
 
 /** The screens that cover the jar. */
-const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'fight'];
+const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'fight', 'install'];
 
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
@@ -934,6 +935,11 @@ export default function App() {
                 onAgain={fightApi.again}
                 onLeave={goHome}
               />
+            </div>
+          )}
+          {phase === 'install' && (
+            <div className="sheet">
+              <InstallHelp onClose={closeCard} />
             </div>
           )}
           {phase === 'jars' && (
