@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import RecordList from './RecordList.jsx';
-import { loadRecords } from '../records.js';
+import { loadClubWinner, loadRecords } from '../records.js';
 import { newClubCode, tidyClubCode } from '../club.js';
 
 const PERIODS = [
@@ -17,6 +17,15 @@ export default function Club({ club, mine, stamp, onJoin, onLeave, onClose }) {
   const [typed, setTyped] = useState('');
   const [problem, setProblem] = useState(null);
   const [copied, setCopied] = useState(false);
+  // Last week's winner wears a small crown this week.
+  const [winner, setWinner] = useState(null);
+  useEffect(() => {
+    let current = true;
+    if (club) loadClubWinner(club).then((row) => current && setWinner(row));
+    return () => {
+      current = false;
+    };
+  }, [club]);
 
   const join = (event) => {
     event.preventDefault();
@@ -78,6 +87,11 @@ export default function Club({ club, mine, stamp, onJoin, onLeave, onClose }) {
       <button className="chip-btn" onClick={share}>
         {copied ? 'Copied!' : 'Invite with this code'}
       </button>
+      {winner && (
+        <p className="winner">
+          Last week’s winner: <b>{winner.name}</b> · {winner.score.toLocaleString()}
+        </p>
+      )}
       <div className="tabs" role="tablist" aria-label="Period">
         {PERIODS.map(({ id, label }) => (
           <button key={id} role="tab" aria-selected={period === id} className={`tab ${period === id ? 'on' : ''}`} onClick={() => setPeriod(id)}>
@@ -89,6 +103,7 @@ export default function Club({ club, mine, stamp, onJoin, onLeave, onClose }) {
         load={() => loadRecords(period, club)}
         watch={`${period}|${club}|${stamp}`}
         mine={mine}
+        crowned={winner?.name}
         empty="Nobody yet. Play a game and save your score!"
       />
       <div className="menu-actions">

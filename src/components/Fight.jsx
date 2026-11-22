@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import SlimeIcon from './SlimeIcon.jsx';
-import { tidyFightCode } from '../fight.js';
+import { ROUNDS_TO_WIN, tidyFightCode } from '../fight.js';
 
 const HEADLINES = { win: 'You win!', lose: 'You lose', draw: 'It’s a draw!' };
 const REASONS = {
@@ -66,7 +66,7 @@ export default function Fight({ fight, me, onHost, onJoin, onAgain, onLeave }) {
     return (
       <div className="card fight">
         <h2>Fight a friend</h2>
-        <p className="sub">Two jars, the same slimes, three minutes. Watch your friend play live: combos drop rocks into their jar!</p>
+        <p className="sub">Two jars, the same slimes, three minutes a round, first to two rounds. Watch your friend play live: combos drop rocks into their jar!</p>
         <button className="btn" onClick={onHost}>
           Start a fight
         </button>
@@ -133,15 +133,21 @@ export default function Fight({ fight, me, onHost, onJoin, onAgain, onLeave }) {
     );
   }
 
-  // After a fight
+  // After a round: who took it, and how the match (first to two rounds) stands.
+  const { me: myWins, foe: foeWins } = fight.wins;
+  const isMatchOver = myWins >= ROUNDS_TO_WIN || foeWins >= ROUNDS_TO_WIN;
   return (
     <div className="card fight">
-      <h2>{HEADLINES[fight.outcome]}</h2>
+      <h2>{isMatchOver ? (myWins > foeWins ? 'You won the match!' : `${fight.foe?.name ?? 'Your friend'} won the match`) : HEADLINES[fight.outcome]}</h2>
       <p className="sub">{REASONS[fight.outcome]?.[fight.reason]}</p>
       {versus}
+      <p className="series" aria-label={`Rounds: you ${myWins}, ${fight.foe?.name ?? 'friend'} ${foeWins}`}>
+        <b>{myWins}</b> – <b>{foeWins}</b>
+        <small>{isMatchOver ? 'Match over' : `First to ${ROUNDS_TO_WIN} rounds wins`}</small>
+      </p>
       {fight.foe ? (
         <button className="btn" onClick={onAgain} disabled={fight.wantsAgain}>
-          {fight.wantsAgain ? 'Waiting for your friend…' : fight.foeWantsAgain ? 'Rematch! They’re ready' : 'Rematch'}
+          {fight.wantsAgain ? 'Waiting for your friend…' : isMatchOver ? (fight.foeWantsAgain ? 'New match! They’re ready' : 'New match') : fight.foeWantsAgain ? 'Next round! They’re ready' : 'Next round'}
         </button>
       ) : (
         <p className="sub">Your friend left.</p>

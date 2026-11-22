@@ -19,6 +19,16 @@ export function tidyClubCode(text) {
 }
 
 /**
+ * The club member to beat next this week: the one just above the player, or the leader when the player isn't on
+ * the board yet. Null when the player leads (or the board is empty).
+ */
+export function nextToBeat(rows, me) {
+  const mine = rows.findIndex((row) => row.name.toLowerCase() === (me ?? '').toLowerCase());
+  if (mine === 0) return null;
+  return (mine === -1 ? rows[0] : rows[mine - 1]) ?? null;
+}
+
+/**
  * Who moved ahead of the player since they last looked.
  * @param rows this week's club board
  * @param me the player's name

@@ -9,12 +9,18 @@
 //   final  { score }                 time is up: my score
 //   again  {}                        I want a rematch
 //   full   { to }                    the host: this fight already has two players
+//   emote  { e }                     a quick reaction (one of EMOTES)
 //   bye    {}                        I left
 import { RealtimeClient } from '@supabase/realtime-js';
 import { API_KEY, SERVER_URL } from './records.js';
 
 export const FIGHT_MS = 180000;
 export const COUNTDOWN_MS = 3500;
+/** A match is the first to this many rounds. */
+export const ROUNDS_TO_WIN = 2;
+/** The quick reactions players can send each other during a fight. */
+export const EMOTES = ['😀', '😱', '😎', '👏'];
+
 /** A combo of n merges sends n - 1 rocks, three at most. */
 export const rocksForCombo = (combo) => Math.max(0, Math.min(3, combo - 1));
 

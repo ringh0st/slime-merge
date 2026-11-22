@@ -160,6 +160,10 @@ export const sfx = {
   over: fx(() => {
     [9, 7, 5].forEach((n, i) => note(step(n, 196), step(n, 196) * 0.985, 0.42, { vol: 0.11, type: 'triangle', delay: i * 0.17, wet: 0.4 }));
   }),
+  /** Too high: a tick that rises with how close the jar is to overflowing (level 0…1). */
+  warn: fx((level) => {
+    note(500 + level * 700, 520 + level * 760, 0.09, { type: 'triangle', vol: 0.07 + level * 0.07 });
+  }),
   click: fx(() => {
     note(780, 1040, 0.05, { vol: 0.06 });
   }),

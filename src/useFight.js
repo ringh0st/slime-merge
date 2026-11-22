@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { COUNTDOWN_MS, FIGHT_MS, joinFight, newFightCode, outcomeOf } from './fight.js';
+import { COUNTDOWN_MS, EMOTES, FIGHT_MS, ROUNDS_TO_WIN, joinFight, newFightCode, outcomeOf } from './fight.js';
 
-const IDLE = { status: 'idle', code: null, isHost: false, foe: null, startAt: 0, endsAt: 0, outcome: null, reason: null, myScore: 0, wantsAgain: false, foeWantsAgain: false, problem: null };
+const IDLE = { status: 'idle', code: null, isHost: false, foe: null, startAt: 0, endsAt: 0, outcome: null, reason: null, myScore: 0, wantsAgain: false, foeWantsAgain: false, problem: null, wins: { me: 0, foe: 0 }, emote: null };
 /** Without a sign of life for this long, the other player is taken to have left. */
 const SILENCE_MS = 9000;
 
@@ -36,6 +36,9 @@ export function useFight(me, handlers) {
   const begin = (seed, delay) => {
     const startAt = Date.now() + delay;
     live.current.seed = seed;
+    // A new match starts once somebody has won the last one.
+    const w = live.current.wins;
+    if (w.me >= ROUNDS_TO_WIN || w.foe >= ROUNDS_TO_WIN) set({ wins: { me: 0, foe: 0 } });
     live.current.score = 0;
     live.current.danger = 0;
     live.current.heard = startAt;
@@ -47,7 +50,9 @@ export function useFight(me, handlers) {
 
   const finish = (outcome, reason) => {
     if (live.current.status === 'done') return;
-    set({ status: 'done', outcome, reason, myScore: live.current.score });
+    const w = live.current.wins;
+    const wins = { me: w.me + (outcome === 'win' ? 1 : 0), foe: w.foe + (outcome === 'lose' ? 1 : 0) };
+    set({ status: 'done', outcome, reason, myScore: live.current.score, wins });
     h.current.onFinish();
   };
 
@@ -81,6 +86,8 @@ export function useFight(me, handlers) {
       s.foeFinal = m.score;
       set({ foe: { ...s.foe, score: m.score } });
       if (s.myFinal != null) finish(outcomeOf(s.myFinal, m.score), 'time');
+    } else if (m.t === 'emote' && EMOTES.includes(m.e)) {
+      set({ emote: { from: 'foe', e: m.e, id: Date.now() } });
     } else if (m.t === 'again') {
       set({ foeWantsAgain: true });
       if (s.isHost && s.wantsAgain) restart();
@@ -159,6 +166,11 @@ export function useFight(me, handlers) {
     /** My combo sends rocks. */
     attack(count) {
       if (count > 0 && live.current.status === 'playing') link.current?.send({ t: 'attack', n: count });
+    },
+    /** A quick reaction, shown on both screens. */
+    emote(e) {
+      link.current?.send({ t: 'emote', e });
+      set({ emote: { from: 'me', e, id: Date.now() } });
     },
     /** My jar overflowed. */
     lost(score) {

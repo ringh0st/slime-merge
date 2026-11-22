@@ -1,7 +1,7 @@
 // Things to play for: goals counted over all games, each unlocking a hat the slimes can wear.
 
 /** What is counted over all games. */
-export const EMPTY_LIFE = { points: 0, games: 0, best: 0, kings: 0, rocks: 0, bestCombo: 0, dailies: 0, rainbows: 0 };
+export const EMPTY_LIFE = { points: 0, games: 0, best: 0, kings: 0, rocks: 0, bestCombo: 0, dailies: 0, rainbows: 0, bestStreak: 0 };
 
 export const GOALS = [
   { id: 'king', text: 'Make a King', stat: 'kings', need: 1, hat: 'top' },
@@ -10,6 +10,9 @@ export const GOALS = [
   { id: 'score', text: 'Score 5,000 in one game', stat: 'best', need: 5000, hat: 'cool' },
   { id: 'daily', text: 'Play 5 daily jars', stat: 'dailies', need: 5, hat: 'flower' },
   { id: 'kings', text: 'Make 5 Kings', stat: 'kings', need: 5, hat: 'crown' },
+  // Only the daily jar gives these two: play it days in a row.
+  { id: 'streak3', text: 'Daily jar 3 days in a row', stat: 'bestStreak', need: 3, hat: 'beanie' },
+  { id: 'streak7', text: 'Daily jar 7 days in a row', stat: 'bestStreak', need: 7, hat: 'halo' },
 ];
 
 export const HATS = {
@@ -19,6 +22,8 @@ export const HATS = {
   cool: { name: 'Cool glasses' },
   flower: { name: 'Flower' },
   crown: { name: 'Crown' },
+  beanie: { name: 'Beanie' },
+  halo: { name: 'Halo' },
 };
 
 export const HAT_IDS = Object.keys(HATS);
@@ -29,8 +34,11 @@ export const goalProgress = (life) => GOALS.map((goal) => ({ ...goal, have: Math
 /** The hats a player has unlocked. */
 export const unlockedHats = (life) => goalProgress(life).filter((goal) => goal.isDone).map((goal) => goal.hat);
 
-/** The lifetime counts after a finished game. `run` is what the engine counted: { kings, rocks, maxCombo, rainbows }. */
-export function lifeAfterGame(life, score, run, isDaily) {
+/**
+ * The lifetime counts after a finished game. `run` is what the engine counted: { kings, rocks, maxCombo, rainbows }.
+ * @param streak the daily-jar streak including this game (0 for a game that isn't the daily jar)
+ */
+export function lifeAfterGame(life, score, run, isDaily, streak = 0) {
   return {
     points: life.points + score,
     games: life.games + 1,
@@ -40,5 +48,6 @@ export function lifeAfterGame(life, score, run, isDaily) {
     bestCombo: Math.max(life.bestCombo, run.maxCombo),
     dailies: life.dailies + (isDaily ? 1 : 0),
     rainbows: life.rainbows + run.rainbows,
+    bestStreak: Math.max(life.bestStreak ?? 0, streak),
   };
 }

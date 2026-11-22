@@ -59,6 +59,18 @@ export async function loadDaily(day, club = null) {
   }
 }
 
+/** Tells the owner about a name on a board that shouldn't be there. Nothing is hidden until the owner decides. */
+export const reportName = (name) => call('slime_report_name', { p_name: name });
+
+/** Last week's winner of a club: { name, score }, or null. */
+export async function loadClubWinner(club) {
+  try {
+    return (await call('slime_club_winner', { p_club: club }))?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Save a score under a name; returns the name as stored.
  * @param extras { club, daily, top, hat }: the club code, the daily jar's day, the biggest slime and its hat

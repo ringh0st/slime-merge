@@ -7,7 +7,7 @@ import { TIERS } from '../game/tiers.js';
 import { JARS, isJarOpen } from '../game/jars.js';
 import { unlockedHats } from '../game/goals.js';
 import { HAT_IDS } from '../game/goals.js';
-import { dayKey, weekOf } from '../daily.js';
+import { dailyStreak, dayKey, weekOf } from '../daily.js';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -17,7 +17,7 @@ const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
  * three players of all time.
  * @param open opens one of the pages: 'daily' | 'jars' | 'club' | 'book' | 'records'
  */
-export default function Home({ best, life, jar, hat, club, discovered, dailyPlayed, passedBy, name, onName, stamp, onPlay, savedRun, onContinue, open }) {
+export default function Home({ best, life, jar, hat, club, discovered, dailyPlayed, passedBy, target, name, onName, stamp, onPlay, savedRun, onContinue, open }) {
   const today = dayKey();
   const todayScore = dailyPlayed[today];
   const openJars = JARS.filter((j) => isJarOpen(j, life.points)).length;
@@ -79,6 +79,12 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
         </button>
       )}
 
+      {target && (
+        <p className="target">
+          Next to beat in your club: <b>{target.name}</b> · {target.score.toLocaleString()}
+        </p>
+      )}
+
       <button className="btn alt fight-btn" onClick={() => open('fight')}>
         Fight a friend
         <small>Live, with a code · 3 minutes</small>
@@ -86,7 +92,10 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
 
       <button className="home-daily" onClick={() => open('daily')}>
         <span className="home-daily-head">
-          <b>Daily jar</b>
+          <b>
+            Daily jar
+            {dailyStreak(dailyPlayed, today) > 1 && <i className="streak-chip">{dailyStreak(dailyPlayed, today)} days in a row</i>}
+          </b>
           <span className={`chip ${todayScore == null ? 'fresh' : ''}`}>{todayScore == null ? 'Play today’s' : `Done · ${todayScore.toLocaleString()}`}</span>
         </span>
         <small>One jar a day, the same slimes for everyone. One try: who scores most?</small>

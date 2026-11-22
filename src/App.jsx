@@ -15,14 +15,14 @@ import Fight from './components/Fight.jsx';
 import InstallHelp from './components/InstallHelp.jsx';
 import GhostJar from './components/GhostJar.jsx';
 import { useFight } from './useFight.js';
-import { rocksForCombo } from './fight.js';
+import { EMOTES, rocksForCombo } from './fight.js';
 import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import { haptic } from './native.js';
 import { store } from './storage.js';
 import { loadRecords, saveScore } from './records.js';
-import { whoPassed } from './club.js';
-import { dayKey, withDailyScore } from './daily.js';
+import { nextToBeat, whoPassed } from './club.js';
+import { dailyStreak, dayKey, withDailyScore } from './daily.js';
 
 const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -38,6 +38,9 @@ function fitJar() {
   const s = Math.max(0.5, Math.min((Math.min(vw, 480) - 32) / W, (vh - chrome) / H, 1.15));
   return { w: Math.round(W * s), h: Math.round(H * s) };
 }
+
+/** How long slimes may stay over the line before the jar overflows (OVER_MS in the engine). */
+const OVERFLOW_SECONDS = 2.6;
 
 /** The first game's tips, one at a time: each stays until the player has done what it says. */
 const COACH_TIPS = {
@@ -137,6 +140,8 @@ export default function App() {
   // The daily jar's day while it is being played (null in a normal game).
   const [dailyRun, setDailyRun] = useState(null);
   const [passedBy, setPassedBy] = useState([]);
+  // This week's club board, for "next to beat" on the home page.
+  const [clubRows, setClubRows] = useState([]);
   // A live fight is being played in the jar.
   const [isFighting, setIsFighting] = useState(false);
   const isFightingRef = useRef(false);
@@ -183,9 +188,11 @@ export default function App() {
 
   // Kept in refs so the game's callbacks (made once) always see the latest.
   const lifeRef = useRef(life);
+  const dailyPlayedRef = useRef(dailyPlayed);
   const dailyRunRef = useRef(dailyRun);
   useEffect(() => {
     lifeRef.current = life;
+    dailyPlayedRef.current = dailyPlayed;
     dailyRunRef.current = dailyRun;
   }, [life, dailyRun]);
 
@@ -304,6 +311,7 @@ export default function App() {
     loadRecords('week', club)
       .then((rows) => {
         if (!current) return;
+        setClubRows(rows ?? []);
         const { ahead, passedBy: fresh } = whoPassed(rows ?? [], playerName, store.get('slime.clubAhead', []));
         store.set('slime.clubAhead', ahead);
         setPassedBy(fresh);
@@ -314,6 +322,7 @@ export default function App() {
     };
   }, [phase, club, playerName]);
 
+  const lastWarn = useRef(0);
   const bestRef = useRef(best);
   const phaseRef = useRef(phase);
   useEffect(() => {
@@ -346,6 +355,11 @@ export default function App() {
       onDanger: (level) => {
         setDanger(level);
         sfx.setTension(level);
+        // A tick that rises as the jar gets closer to overflowing, about three a second.
+        if (level > 0.12 && performance.now() - lastWarn.current > 330) {
+          lastWarn.current = performance.now();
+          sfx.warn(level);
+        }
       },
       onHelpers: setHelpers,
       onDrop: (drops) =>
@@ -394,18 +408,16 @@ export default function App() {
         store.set('slime.coached', true);
         setCoach(null);
         const day = dailyRunRef.current;
-        const nextLife = lifeAfterGame(lifeRef.current, finalScore, run, Boolean(day));
+        const playedNow = day ? withDailyScore(dailyPlayedRef.current, day, finalScore) : dailyPlayedRef.current;
+        const nextLife = lifeAfterGame(lifeRef.current, finalScore, run, Boolean(day), day ? dailyStreak(playedNow, day) : 0);
         // Hats and jars this game unlocked, to celebrate on the game-over card.
         const newHats = unlockedHats(nextLife).filter((id) => !unlockedHats(lifeRef.current).includes(id));
         const newJars = JARS.filter((j) => isJarOpen(j, nextLife.points) && !isJarOpen(j, lifeRef.current.points));
         setLife(nextLife);
         store.set('slime.life', nextLife);
         if (day) {
-          setDailyPlayed((played) => {
-            const nextPlayed = withDailyScore(played, day, finalScore);
-            store.set('slime.daily', nextPlayed);
-            return nextPlayed;
-          });
+          setDailyPlayed(playedNow);
+          store.set('slime.daily', playedNow);
         }
         setIsPopping(false);
         // A fight isn't a record (rocks from the other player, a different jar): it never changes Best.
@@ -754,8 +766,23 @@ export default function App() {
               <p className="duel-name foe">{fight.foe?.name ?? 'Friend'} · live</p>
               <div className="jar jar-classic ghost" style={{ width: jarW, height: jarH }}>
                 <GhostJar jarRef={foeJar} hat={fight.foe?.hat} width={jarW} height={jarH} dangerY={Math.round(100 * FIGHT_SHAPE.scale)} />
+                {fight.emote?.from === 'foe' && (
+                  <span className="emote-pop" key={fight.emote.id} aria-live="polite">
+                    {fight.emote.e}
+                  </span>
+                )}
               </div>
-              <p className="duel-name">You</p>
+              <div className="duel-row">
+                <p className="duel-name">You</p>
+                {/* Quick reactions: they pop up over your jar on your friend's screen. */}
+                <div className="emotes" role="group" aria-label="Send a reaction">
+                  {EMOTES.map((e) => (
+                    <button key={e} onClick={() => fightApi.emote(e)} aria-label={`Send ${e}`}>
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
         <div className="tilt" ref={tiltRef}>
@@ -781,12 +808,24 @@ export default function App() {
               </div>
             )}
             {isPopping && phase === 'play' && <div className="pop-hint">Tap a slime to pop it</div>}
+            {/* Too high: a ring that empties and the seconds left, so an overflow never comes as a surprise. */}
+            {danger > 0.12 && phase === 'play' && (
+              <div className="overflow-warn" role="alert" style={{ '--left': 1 - danger }}>
+                <b>{Math.max(1, Math.ceil((1 - danger) * OVERFLOW_SECONDS))}</b>
+                <span>Too high!</span>
+              </div>
+            )}
             {coach && phase === 'play' && !isPopping && (
               <div className={`coach coach-${coach}`} key={coach} role="status">
                 {COACH_TIPS[coach]}
               </div>
             )}
             {dailyRun && isInGame && <div className="daily-tag">Daily jar</div>}
+            {isFighting && fight.emote?.from === 'me' && (
+              <span className="emote-pop mine" key={fight.emote.id} aria-hidden="true">
+                {fight.emote.e}
+              </span>
+            )}
             {isFighting && isInGame && (
               <div className="daily-tag" role="timer">
                 {Math.floor(fightSecondsLeft / 60)}:{String(fightSecondsLeft % 60).padStart(2, '0')}
@@ -951,6 +990,7 @@ export default function App() {
               discovered={discovered}
               dailyPlayed={dailyPlayed}
               passedBy={passedBy}
+              target={club ? nextToBeat(clubRows, playerName) : null}
               name={playerName}
               onName={rename}
               stamp={`${saved}|${boardStamp}`}

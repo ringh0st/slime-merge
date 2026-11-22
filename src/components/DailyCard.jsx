@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import RecordList from './RecordList.jsx';
 import { loadDaily } from '../records.js';
-import { dayKey, dayLabel, weekOf } from '../daily.js';
+import { dailyStreak, dayKey, dayLabel, weekOf } from '../daily.js';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -14,6 +14,7 @@ export default function DailyCard({ played, club, mine, stamp, onPlay, isOpen = 
   const today = dayKey();
   const week = weekOf();
   const myScore = played[today];
+  const streak = dailyStreak(played, today);
   // With a club the board opens on it; the world is one tap away.
   const [scope, setScope] = useState(club ? 'club' : 'world');
   const [copied, setCopied] = useState(false);
@@ -35,6 +36,10 @@ export default function DailyCard({ played, club, mine, stamp, onPlay, isOpen = 
     <div className="card daily">
       <h2>Daily jar</h2>
       <p className="sub">The same slimes for everyone. One try a day.</p>
+      <p className="streak">
+        <b>{streak}</b> {streak === 1 ? 'day' : 'days'} in a row
+        <small>{streak < 3 ? `${3 - streak} more for the Beanie` : streak < 7 ? `${7 - streak} more for the Halo` : 'Both streak hats are yours!'}</small>
+      </p>
       <ol className="week" aria-label="This week">
         {week.map((day, i) => (
           <li

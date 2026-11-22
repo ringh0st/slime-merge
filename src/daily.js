@@ -17,5 +17,17 @@ export function withDailyScore(played, day, score) {
   return Object.fromEntries(Object.entries({ ...played, [day]: score }).filter(([key]) => key >= cutoff));
 }
 
+/** How many days in a row the daily jar was played, ending today (or yesterday: today can still be played). */
+export function dailyStreak(played, today = dayKey()) {
+  const dayBefore = (day) => dayKey(new Date(new Date(`${day}T00:00:00Z`).getTime() - DAY_MS));
+  let day = played[today] != null ? today : dayBefore(today);
+  let streak = 0;
+  while (played[day] != null) {
+    streak += 1;
+    day = dayBefore(day);
+  }
+  return streak;
+}
+
 /** "22 Nov" for a day key. */
 export const dayLabel = (day) => new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });

@@ -149,6 +149,30 @@ const HAT_ART = {
     ctx.fill();
     ctx.restore();
   },
+  beanie(ctx, r) {
+    ctx.fillStyle = '#4fbfad';
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.62, r * 0.62, Math.PI, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.68, -r * 0.74, r * 1.36, r * 0.2, r * 0.1);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, -r * 1.26, r * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+  },
+  halo(ctx, r) {
+    ctx.strokeStyle = '#ffd45e';
+    ctx.lineWidth = Math.max(2, r * 0.11);
+    ctx.shadowColor = 'rgba(255,212,94,0.9)';
+    ctx.shadowBlur = r * 0.35;
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 1.2, r * 0.5, r * 0.15, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowColor = 'transparent';
+  },
   crown,
 };
 

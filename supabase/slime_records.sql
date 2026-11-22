@@ -23,6 +23,34 @@ create index if not exists slime_scores_daily on public.slime_scores (daily) whe
 alter table public.slime_scores enable row level security;
 revoke all on public.slime_scores from anon, authenticated;
 
+-- Names players reported, for the owner to look at (Table Editor → slime_reports), and names the owner hid.
+-- To hide a name from every board, run:   insert into public.slime_hidden_names (name) values ('the name');
+-- To show it again:                       delete from public.slime_hidden_names where name = 'the name';
+create table if not exists public.slime_reports (
+  id bigint generated always as identity primary key,
+  name text not null,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.slime_hidden_names (
+  name text primary key,
+  created_at timestamptz not null default now()
+);
+alter table public.slime_reports enable row level security;
+alter table public.slime_hidden_names enable row level security;
+revoke all on public.slime_reports from anon, authenticated;
+revoke all on public.slime_hidden_names from anon, authenticated;
+
+-- Whether the owner hid this name.
+create or replace function public._slime_hidden(p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.slime_hidden_names h where lower(h.name) = lower(p_name));
+$$;
+
 -- Earlier versions of the functions (their arguments or results changed).
 drop function if exists public.slime_save_score(text, integer);
 drop function if exists public.slime_records(text);
@@ -55,7 +83,7 @@ declare
   -- A daily jar is the UTC day's; a day either side is allowed for clocks and late saves.
   v_daily date := case when p_daily between v_today - 1 and v_today + 1 then p_daily end;
   v_top smallint := case when p_top between 0 and 9 then p_top end;
-  v_hat text := case when p_hat in ('top', 'bow', 'party', 'cool', 'flower', 'crown') then p_hat end;
+  v_hat text := case when p_hat in ('top', 'bow', 'party', 'cool', 'flower', 'crown', 'beanie', 'halo') then p_hat end;
 begin
   if char_length(v_name) < 2 or char_length(v_name) > 16 then
     raise exception using message = 'Names are 2 to 16 characters.';
@@ -98,6 +126,7 @@ as $$
       else '-infinity'::timestamptz
     end
       and (p_club is null or s.club = public._slime_club(p_club))
+      and not public._slime_hidden(s.name)
     order by lower(s.name), s.score desc, s.created_at
   )
   select (row_number() over (order by best.score desc, best.created_at))::integer, best.name, best.score, best.top, best.hat
@@ -118,6 +147,7 @@ as $$
     select distinct on (lower(s.name)) s.name, s.score, s.created_at, s.top, s.hat
     from public.slime_scores s
     where s.daily = p_day and (p_club is null or s.club = public._slime_club(p_club))
+      and not public._slime_hidden(s.name)
     order by lower(s.name), s.score desc, s.created_at
   )
   select (row_number() over (order by best.score desc, best.created_at))::integer, best.name, best.score, best.top, best.hat
@@ -126,7 +156,53 @@ as $$
   limit 20;
 $$;
 
+-- A player reports a name on a board. Nothing is hidden by itself (so nobody can remove a rival): the report
+-- waits in slime_reports for the owner. One report per name a minute, thirty a minute in all.
+create or replace function public.slime_report_name(p_name text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_name text := btrim(coalesce(p_name, ''));
+begin
+  if not exists (select 1 from public.slime_scores where lower(name) = lower(v_name)) then
+    return false;
+  end if;
+  if exists (select 1 from public.slime_reports where lower(name) = lower(v_name) and created_at > now() - interval '1 minute')
+     or (select count(*) from public.slime_reports where created_at > now() - interval '1 minute') >= 30 then
+    return true;
+  end if;
+  insert into public.slime_reports (name) values (v_name);
+  return true;
+end;
+$$;
+
+-- Last week's winner of a club (Monday to Monday, UTC): the name with the best score saved in it, if any.
+create or replace function public.slime_club_winner(p_club text)
+returns table (name text, score integer)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select s.name, s.score
+  from public.slime_scores s
+  where s.club = public._slime_club(p_club)
+    and s.created_at >= (date_trunc('week', now() at time zone 'utc') - interval '7 days') at time zone 'utc'
+    and s.created_at < date_trunc('week', now() at time zone 'utc') at time zone 'utc'
+    and not public._slime_hidden(s.name)
+  order by s.score desc, s.created_at
+  limit 1;
+$$;
+
 revoke all on function public._slime_club(text) from public;
+revoke all on function public._slime_hidden(text) from public;
+revoke all on function public.slime_report_name(text) from public;
+revoke all on function public.slime_club_winner(text) from public;
+grant execute on function public.slime_report_name(text) to anon, authenticated;
+grant execute on function public.slime_club_winner(text) to anon, authenticated;
 revoke all on function public.slime_save_score(text, integer, text, date, integer, text) from public;
 revoke all on function public.slime_records(text, text) from public;
 revoke all on function public.slime_daily(date, text) from public;
