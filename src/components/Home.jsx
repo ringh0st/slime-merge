@@ -1,4 +1,7 @@
 import SlimeIcon from './SlimeIcon.jsx';
+import Nickname from './Nickname.jsx';
+import RecordList from './RecordList.jsx';
+import { loadRecords } from '../records.js';
 import { TIERS } from '../game/tiers.js';
 import { JARS, isJarOpen } from '../game/jars.js';
 import { unlockedHats } from '../game/goals.js';
@@ -8,11 +11,11 @@ import { dayKey, weekOf } from '../daily.js';
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /**
- * The home page: the game's front door. Play is the big button; under it today's daily jar and four doors
- * (jars, club, slime book, records), each showing where the player stands.
+ * The home page: the game's front door. Play is the big button; with it the player's nickname, today's daily jar,
+ * three doors (jars, club, slime book) that show where the player stands, and the top three players of all time.
  * @param open opens one of the pages: 'daily' | 'jars' | 'club' | 'book' | 'records'
  */
-export default function Home({ best, life, jar, hat, club, discovered, dailyPlayed, passedBy, onPlay, open }) {
+export default function Home({ best, life, jar, hat, club, discovered, dailyPlayed, passedBy, name, onName, stamp, onPlay, open }) {
   const today = dayKey();
   const todayScore = dailyPlayed[today];
   const openJars = JARS.filter((j) => isJarOpen(j, life.points)).length;
@@ -25,6 +28,7 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
       </div>
       <h1>Slime Merge</h1>
       <p className="tag">Drop. Match. Merge. Don’t overflow.</p>
+      <Nickname name={name} onChange={onName} />
 
       {life.games === 0 && best === 0 && (
         <ul className="howto">
@@ -63,6 +67,7 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
           <b>Daily jar</b>
           <span className={`chip ${todayScore == null ? 'fresh' : ''}`}>{todayScore == null ? 'Play today’s' : `Done · ${todayScore.toLocaleString()}`}</span>
         </span>
+        <small>One jar a day, the same slimes for everyone. One try: who scores most?</small>
         <span className="week" aria-hidden="true">
           {weekOf().map((day, i) => (
             <span key={day} className={`${dailyPlayed[day] != null ? 'done' : ''} ${day === today ? 'today' : ''}`}>
@@ -100,16 +105,16 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
             {Math.min(discovered + 1, TIERS.length)}/{TIERS.length} slimes · {unlockedHats(life).length}/{HAT_IDS.length} hats
           </small>
         </button>
-        <button onClick={() => open('records')}>
-          <span className="door-art" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5c0 3 1 4.5 3 5M16 6h3c0 3-1 4.5-3 5M12 13v4M8.5 20h7M10 17h4" />
-            </svg>
-          </span>
-          <b>Records</b>
-          <small>The whole world</small>
-        </button>
       </div>
+      <section className="home-top" aria-labelledby="top-players">
+        <div className="home-daily-head">
+          <b id="top-players">Top players</b>
+          <button className="chip" onClick={() => open('records')}>
+            See all
+          </button>
+        </div>
+        <RecordList load={() => loadRecords('all')} watch={stamp} mine={name || null} limit={3} />
+      </section>
       <p className="hint">Tap or click to drop · ← → and Space work too</p>
     </div>
   );

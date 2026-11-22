@@ -5,9 +5,9 @@ const API_URL = 'https://wapxwfpgrijxaclsbwkq.supabase.co/rest/v1/rpc/';
 const API_KEY = 'sb_publishable_P96gX4pjrmkFtvrbHGQdRg_6K1eXEtc';
 
 export const PERIODS = [
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
   { id: 'all', label: 'All time' },
+  { id: 'month', label: 'Month' },
+  { id: 'week', label: 'Week' },
 ];
 
 /** Why a name can't be used, or null when it's fine. Must match slime_save_score in supabase/slime_records.sql. */

@@ -11,10 +11,11 @@ A squishy physics merge puzzle built with React and Matter.js.
 
 ## What's in the game
 
+- **Nicknames and Top players** (`Nickname`, `Records`): a player picks a nickname once (on the home page or on Top players); after that every game's score saves by itself under it. The home page shows the top three of all time, and Top players lists all time, the month and the week.
 - **Home page** (`Home`): the game opens on its own page, not on a card over the jar: Play, today's daily jar with its week, and four doors (Jars, Jar club, Slime book, Records) that show where you stand. Pause → Home goes back to it mid-game.
 
 - **Special pieces** (`src/game/tiers.js`, `engine.js`): now and then a **Rainbow** drops (it becomes whatever slime it touches and merges with it), a **Bomb** (pops everything close a moment after it lands) or a **Frozen** slime (can't merge until a merge happens beside it). Rocks are still there.
-- **Jars** (`src/game/jars.js`, `JarPicker`): Classic, Honey (slow and sticky), Space (floaty) and the Fish bowl (round bottom, bubbles lift small slimes). A jar opens once you've scored enough points in total, over all games.
+- **Jars** (`src/game/jars.js`, `JarPicker`): Classic, Honey (thick and sticky), Space (floaty) and the Fish bowl (round bottom, bubbles lift small slimes). A jar opens once you've scored enough points in total, over all games.
 - **Helpers** (`HelperBar`): **Shake** makes everything jump, **Pop** removes the piece you tap, **Hold** puts the waiting piece aside. You start with one Shake and one Pop and earn more by scoring (the bar under the buttons fills).
 - **Daily jar** (`src/daily.js`, `DailyCard`): one jar a day (UTC) with the same pieces for everyone and one try, its own board and a share button.
 - **Jar club** (`src/club.js`, `Club`): a private board for family and friends, joined with a short code like `JELLY-4821`. No accounts. The menu tells you when someone in the club passes you.

@@ -1570,3 +1570,76 @@ h2 {
     padding: 5px 6px;
   }
 }
+
+/* ---------- Nickname and top players ---------- */
+.name-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1.5px var(--glass-border);
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+}
+.name-chip b {
+  color: var(--ink);
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+}
+.name-chip.ask {
+  color: #fff;
+  background: var(--accent-2);
+  box-shadow: none;
+  font: 600 15px 'Fredoka', system-ui, sans-serif;
+}
+.name-chip:focus-visible,
+.chip:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.name-form {
+  width: 100%;
+  max-width: 320px;
+}
+button.chip {
+  border: 0;
+}
+.home-daily small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.3;
+  margin-top: -4px;
+}
+.home-doors {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.home-doors b {
+  font-size: 16px;
+}
+.home-doors small {
+  font-size: 11.5px;
+}
+.home-top {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px 13px;
+  border-radius: 22px;
+  background: var(--glass-strong);
+  box-shadow: inset 0 0 0 1.5px var(--glass-border);
+  text-align: left;
+}
+.home-top b {
+  font: 600 20px 'Fredoka', system-ui, sans-serif;
+}
+.home-top .record-list {
+  min-height: 0;
+  max-height: none;
+}
+.saved-as {
+  margin: 0;
+}

@@ -15,7 +15,7 @@ import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import { haptic } from './native.js';
 import { store } from './storage.js';
-import { loadRecords } from './records.js';
+import { loadRecords, saveScore } from './records.js';
 import { whoPassed } from './club.js';
 import { dayKey, withDailyScore } from './daily.js';
 
@@ -130,6 +130,12 @@ export default function App() {
   // Records: the name scores are saved under, whether this run's score is saved, and where the records card goes back to.
   const [playerName, setPlayerName] = useState(() => store.get('slime.name', ''));
   const [saved, setSaved] = useState(false);
+  // 'saving' | 'failed' | null: how the automatic save of this game's score is going.
+  const [autoSave, setAutoSave] = useState(null);
+  const rename = (name) => {
+    setPlayerName(name);
+    store.set('slime.name', name);
+  };
   // Where a card (records, club, daily…) goes back to.
   const [cardFrom, setCardFrom] = useState('home');
   const openCard = (card, from = 'home') => {
@@ -153,6 +159,20 @@ export default function App() {
   const wornHat = unlockedHats(life).includes(hat) ? hat : null;
   // The daily jar is always the classic one, so it is the same for everyone.
   const shownJar = dailyRun ? JARS[0] : jar;
+  // A player with a nickname never types it again: each game's score saves by itself when the game ends.
+  const savedResult = useRef(null);
+  useEffect(() => {
+    if (!playerName || result.score < 1 || savedResult.current === result || phase !== 'over') return;
+    savedResult.current = result;
+    setAutoSave('saving');
+    saveScore(playerName, result.score, { club, daily: result.daily, top: result.top, hat: wornHat })
+      .then(() => {
+        setSaved(true);
+        setAutoSave(null);
+      })
+      .catch(() => setAutoSave('failed'));
+  }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Behind a page nothing needs to move (and a game that just ended stays as it was).
   const isPageShown = PAGES.includes(phase);
   useEffect(() => {
@@ -265,6 +285,7 @@ export default function App() {
         }
         setResult({ score: finalScore, top, newBest, newHats, newJars, daily: day });
         setSaved(false);
+        setAutoSave(null);
         setTimeout(() => setPhase('over'), 700);
       },
     });
@@ -578,17 +599,28 @@ export default function App() {
                     ))}
                   </ul>
                 )}
-                {result.score > 0 && !saved && (
+                {playerName && result.score > 0 && autoSave !== 'failed' && (
+                  <p className="sub saved-as" role="status">
+                    {saved ? (
+                      <>
+                        Saved as <b>{playerName}</b> ✓
+                      </>
+                    ) : (
+                      'Saving…'
+                    )}
+                  </p>
+                )}
+                {result.score > 0 && !saved && (!playerName || autoSave === 'failed') && (
                   <SaveScore
                     score={result.score}
                     initialName={playerName}
                     extras={{ club, daily: result.daily, top: result.top, hat: wornHat }}
                     onSaved={(name) => {
-                      setPlayerName(name);
-                      store.set('slime.name', name);
+                      // Typed here the first time (or after a failed save): from now on it saves by itself.
+                      savedResult.current = result;
+                      rename(name);
                       setSaved(true);
-                      if (result.daily) openCard('daily', 'over');
-                      else openRecords('over');
+                      setAutoSave(null);
                     }}
                   />
                 )}
@@ -597,7 +629,7 @@ export default function App() {
                 </button>
                 <div className="menu-actions">
                   <button className="btn ghost" onClick={() => (result.daily ? openCard('daily', 'over') : openRecords('over'))}>
-                    {result.daily ? 'Today’s board' : club ? 'Club' : 'Records'}
+                    {result.daily ? 'Today’s board' : club ? 'Club' : 'Top players'}
                   </button>
                   <button className="btn ghost" onClick={() => setPhase('home')}>
                     Home
@@ -643,6 +675,9 @@ export default function App() {
               discovered={discovered}
               dailyPlayed={dailyPlayed}
               passedBy={passedBy}
+              name={playerName}
+              onName={rename}
+              stamp={saved}
               onPlay={() => start(null)}
               open={openCard}
             />
@@ -698,7 +733,7 @@ export default function App() {
 
           {phase === 'records' && (
             <div className="sheet">
-              <Records mine={playerName || null} stamp={saved} onClose={closeCard} />
+              <Records mine={playerName || null} stamp={saved} onName={rename} onClose={closeCard} />
             </div>
           )}
           {phase === 'club' && (
