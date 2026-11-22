@@ -67,8 +67,8 @@ export async function loadDaily(day, club = null) {
 export const countVisit = (isNew) => call('slime_seen', { p_new: isNew }).catch(() => {});
 /** A game was finished. */
 export const countGame = (isFight) => call('slime_played', { p_fight: isFight }).catch(() => {});
-/** The numbers for the owner's stats page. */
-export const loadStats = () => call('slime_stats', {});
+/** The numbers for the owner's stats page, or null when the password is wrong. */
+export const loadStats = (password) => call('slime_stats', { p_password: password });
 
 /** Last week's winner of a club: { name, score }, or null. */
 export async function loadClubWinner(club) {

@@ -1,28 +1,70 @@
 import { useEffect, useState } from 'react';
 import { loadStats } from '../records.js';
+import { store } from '../storage.js';
 import { dayLabel } from '../daily.js';
 
 /**
  * The owner's view of how many people play (open the game with ?stats at the end of its address): totals, and one
- * row per day for the last 30 days. Counts only, nothing personal.
+ * row per day for the last 30 days. Counts only, nothing personal. It opens only with the owner's password, which
+ * the server checks (supabase/slime_records.sql, slime_owner).
  */
 export default function Stats({ onClose }) {
-  const [state, setState] = useState({ status: 'loading' });
+  // The owner's password is typed once and kept on this device.
+  const [password, setPassword] = useState(() => store.get('slime.ownerKey', ''));
+  const [typed, setTyped] = useState('');
+  const [state, setState] = useState({ status: password ? 'loading' : 'locked' });
   useEffect(() => {
+    if (!password) return undefined;
     let current = true;
-    loadStats()
-      .then((stats) => current && setState({ status: 'ready', stats }))
-      .catch((error) => current && setState({ status: 'error', message: error.message }));
+    setState({ status: 'loading' });
+    loadStats(password)
+      .then((stats) => {
+        if (!current) return;
+        if (stats) return setState({ status: 'ready', stats });
+        store.set('slime.ownerKey', '');
+        setPassword('');
+        setState({ status: 'locked', problem: 'That password isn’t right.' });
+      })
+      .catch((error) => current && setState({ status: 'locked', problem: `${error.message} (Run the newest slime_records.sql in Supabase first.)` }));
     return () => {
       current = false;
     };
-  }, []);
+  }, [password]);
+
+  const unlock = (event) => {
+    event.preventDefault();
+    store.set('slime.ownerKey', typed);
+    setPassword(typed);
+  };
 
   if (state.status !== 'ready') {
     return (
       <div className="card stats">
         <h2>Players</h2>
-        <p className="sub">{state.status === 'loading' ? 'Counting…' : `${state.message} (Run the newest slime_records.sql in Supabase first.)`}</p>
+        {state.status === 'loading' ? (
+          <p className="sub">Counting…</p>
+        ) : (
+          <>
+            <p className="sub">This page is for the owner.</p>
+            <form className="save-score" onSubmit={unlock}>
+              <input
+                type="password"
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                placeholder="Owner password"
+                aria-label="Owner password"
+                autoComplete="current-password"
+                enterKeyHint="go"
+              />
+              <button className="btn save">Open</button>
+              {state.problem && (
+                <p className="problem" role="alert">
+                  {state.problem}
+                </p>
+              )}
+            </form>
+          </>
+        )}
         <button className="btn ghost" onClick={onClose}>
           Back
         </button>

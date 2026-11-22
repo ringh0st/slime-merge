@@ -212,16 +212,34 @@ as $$
         fights = slime_days.fights + case when p_fight then 1 else 0 end;
 $$;
 
+-- The stats page is the owner's only: it needs a password that lives in this table and nowhere else.
+-- Choose your own and set it by running this one line yourself (it is not part of this file on purpose):
+--   insert into public.slime_owner (id, password) values (1, 'your password here')
+--     on conflict (id) do update set password = excluded.password;
+-- Until a password is set, nobody can open the stats.
+create table if not exists public.slime_owner (
+  id integer primary key check (id = 1),
+  password text not null
+);
+alter table public.slime_owner enable row level security;
+revoke all on public.slime_owner from anon, authenticated;
+drop function if exists public.slime_stats();
+
 -- The numbers for the stats page (open the game with ?stats at the end of its address): totals, the last 30
--- days, and how many different names are on the boards.
-create or replace function public.slime_stats()
+-- days, and how many different names are on the boards. Null when the password is wrong (after a short wait, so
+-- guessing is slow).
+create or replace function public.slime_stats(p_password text)
 returns jsonb
-language sql
-stable
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select jsonb_build_object(
+begin
+  if not exists (select 1 from public.slime_owner where id = 1 and password = p_password and length(p_password) >= 4) then
+    perform pg_sleep(1);
+    return null;
+  end if;
+  return jsonb_build_object(
     'players_ever', (select coalesce(sum(new_players), 0) from public.slime_days),
     'games_ever', (select coalesce(sum(games), 0) from public.slime_days),
     'fights_ever', (select coalesce(sum(fights), 0) from public.slime_days),
@@ -232,14 +250,15 @@ as $$
       from (select * from public.slime_days where day > (now() at time zone 'utc')::date - 30) d
     )
   );
+end;
 $$;
 
 revoke all on function public.slime_seen(boolean) from public;
 revoke all on function public.slime_played(boolean) from public;
-revoke all on function public.slime_stats() from public;
+revoke all on function public.slime_stats(text) from public;
 grant execute on function public.slime_seen(boolean) to anon, authenticated;
 grant execute on function public.slime_played(boolean) to anon, authenticated;
-grant execute on function public.slime_stats() to anon, authenticated;
+grant execute on function public.slime_stats(text) to anon, authenticated;
 
 revoke all on function public._slime_club(text) from public;
 revoke all on function public._slime_hidden(text) from public;
