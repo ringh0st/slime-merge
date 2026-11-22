@@ -48,13 +48,13 @@ export default function RecordList({ load, watch, mine, empty = 'No records yet.
       {state.status === 'ready' && state.rows.length > 0 && (
         <ol>
           {state.rows.slice(0, limit).map((row) => (
-            <li key={row.place} className={`record-row ${mine && row.name.toLowerCase() === mine.toLowerCase() ? 'mine' : ''}`}>
+            <li key={row.place} className={`record-row ${row.place <= 3 ? `top top${row.place}` : ''} ${mine && row.name.toLowerCase() === mine.toLowerCase() ? 'mine' : ''}`}>
               <span className={`place p${row.place}`}>{row.place}</span>
               <SlimeIcon tier={row.top ?? 3} hat={row.hat} size={34} />
               <span className="who">
                 {row.name}
                 {crowned && crowned.toLowerCase() === row.name.toLowerCase() && (
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-label="Last week’s winner" className="mini-crown">
+                  <svg viewBox="0 0 24 24" width="26" height="26" aria-label="Last week’s winner" className="mini-crown">
                     <path d="M3 18l1.5-10 4.5 4 3-7 3 7 4.5-4L21 18z" fill="#ffd45e" stroke="#c9962a" strokeWidth="1.5" strokeLinejoin="round" />
                   </svg>
                 )}
