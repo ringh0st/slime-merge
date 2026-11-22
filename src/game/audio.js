@@ -76,7 +76,7 @@ function note(f0, f1, dur, { type = 'sine', vol = 0.18, delay = 0, attack = 0.00
 
 let noiseBuffer = null;
 /** A puff of filtered noise: the "air" in pops, cracks and rattles. */
-function puff(dur, { freq = 1800, q = 0.8, vol = 0.12, delay = 0, type = 'bandpass', slideTo = null } = {}) {
+function puff(dur, { freq = 1800, q = 0.8, vol = 0.12, delay = 0, type = 'bandpass', slideTo = null, bus = null } = {}) {
   const a = ac();
   if (!a) return;
   if (!noiseBuffer) {
@@ -97,7 +97,7 @@ function puff(dur, { freq = 1800, q = 0.8, vol = 0.12, delay = 0, type = 'bandpa
   gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   src.connect(filter);
   filter.connect(gain);
-  gain.connect(sfxBus);
+  gain.connect(bus ?? sfxBus);
   src.start(t, Math.random() * 0.5, dur + 0.05);
 }
 
@@ -122,6 +122,10 @@ export const sfx = {
   setMusic(on) {
     musicOn = on;
     music.sync();
+  },
+  /** How full the jar is, 0 (calm) to 1 (about to overflow): the music picks up with it. */
+  setTension(level) {
+    music.tension = level;
   },
   /** A slime let go: a small wet "plip". */
   drop: fx(() => {
@@ -191,12 +195,12 @@ export const sfx = {
 };
 
 /*
- * Background music: calm and quiet, put together as it plays so it never loops the same way twice.
- * Four chords take turns (two bars each). Under them a soft pad and a bass note; over them a marimba-like voice
- * picks notes of the chord on a swung grid, sometimes resting.
+ * Background music: light and bouncy, like the slimes, and quiet. It is put together as it plays, so it never loops
+ * the same way twice. Four chords take turns (two bars each). A hopping bass and a soft shaker keep the bounce, a
+ * plucked voice plays a tune that skips around the chord, and a faint pad holds it together. When the jar fills up
+ * (`tension`), it plays a little faster and the shaker gets busier.
  */
-const BPM = 84;
-const BEAT = 60 / BPM;
+const BPM = 104;
 // Each chord: its bass note and the scale steps that sound good over it.
 const CHORDS = [
   { bass: 130.81, tones: [0, 2, 4, 5, 7, 9] }, // C
@@ -209,7 +213,8 @@ const music = {
   timer: null,
   nextBeat: 0,
   beat: 0,
-  last: 4,
+  last: 6,
+  tension: 0,
   /** Starts or stops the music to match the switch (and only once the audio is awake). */
   sync() {
     if (!ctx) return;
@@ -227,31 +232,40 @@ const music = {
   /** Writes the next beats a little ahead of time, so the rhythm stays steady whatever the screen is doing. */
   fill() {
     while (this.nextBeat < ctx.currentTime + 0.5) {
-      this.playBeat(this.beat, this.nextBeat - ctx.currentTime);
+      // A fuller jar plays up to an eighth faster.
+      const beatLength = 60 / (BPM * (1 + this.tension * 0.12));
+      this.playBeat(this.beat, this.nextBeat - ctx.currentTime, beatLength);
       this.beat += 1;
-      this.nextBeat += BEAT;
+      this.nextBeat += beatLength;
     }
   },
-  playBeat(beat, delay) {
+  playBeat(beat, delay, len) {
     const chord = CHORDS[Math.floor(beat / 8) % CHORDS.length];
     const inBar = beat % 4;
     const to = { bus: musicBus };
+    const half = delay + len * 0.56; // the off-beat, swung a little late: that is the bounce
     if (beat % 8 === 0) {
-      // The pad: three soft notes of the chord, held for the two bars.
-      [chord.tones[0], chord.tones[2], chord.tones[4]].forEach((n) => note(step(n), step(n), BEAT * 8.2, { ...to, type: 'triangle', vol: 0.022, delay, attack: 0.9 }));
+      // The pad: two soft notes of the chord, held for the two bars.
+      [chord.tones[0], chord.tones[2]].forEach((n) => note(step(n), step(n), len * 8.2, { ...to, type: 'triangle', vol: 0.014, delay, attack: 0.8 }));
     }
-    if (inBar === 0 || (inBar === 2 && Math.random() < 0.6)) {
-      note(chord.bass, chord.bass, BEAT * 1.6, { ...to, vol: 0.07, delay, attack: 0.02 });
-    }
-    // The tune: on most beats, sometimes also on the half beat; it moves by small steps and rests now and then.
-    for (const half of [0, 0.5]) {
-      if (Math.random() > (half ? 0.38 : 0.72)) continue;
+    // The bass hops: the root on 1 and 3, a higher bounce on the off-beats of 2 and 4.
+    if (inBar === 0 || inBar === 2) note(chord.bass, chord.bass * 0.98, len * 0.5, { ...to, type: 'triangle', vol: 0.085, delay, attack: 0.006 });
+    else note(chord.bass * 2, chord.bass * 2, len * 0.3, { ...to, type: 'triangle', vol: 0.04, delay: half, attack: 0.006 });
+    // The shaker: a whisper on every off-beat, and on the beats too once the jar gets full.
+    puff(0.04, { ...to, type: 'highpass', freq: 6500, vol: 0.016, delay: half });
+    if (this.tension > 0.35) puff(0.03, { ...to, type: 'highpass', freq: 7500, vol: 0.012, delay });
+    // The tune: short plucked notes that skip around the chord, more often on the off-beats.
+    for (const [at, chance] of [
+      [delay, 0.62],
+      [half, 0.5],
+    ]) {
+      if (Math.random() > chance) continue;
       const near = chord.tones.map((tone) => tone + 5).sort((p, q) => Math.abs(p - this.last) - Math.abs(q - this.last));
-      const pick = near[Math.floor(Math.random() * Math.min(3, near.length))];
+      // Mostly a neighbor, now and then a leap: that is what makes it playful.
+      const pick = Math.random() < 0.25 ? near[near.length - 1 - Math.floor(Math.random() * 2)] : near[Math.floor(Math.random() * 3)];
       this.last = pick;
-      const at = delay + half * BEAT * 1.08; // a touch of swing
-      note(step(pick), step(pick), 0.5, { ...to, vol: 0.05, delay: at, attack: 0.004 });
-      note(step(pick) * 2, step(pick) * 2, 0.12, { ...to, vol: 0.012, delay: at });
+      note(step(pick), step(pick), 0.22, { ...to, type: 'triangle', vol: 0.05, delay: at, attack: 0.003 });
+      note(step(pick) * 2, step(pick) * 2, 0.07, { ...to, vol: 0.012, delay: at });
     }
   },
 };

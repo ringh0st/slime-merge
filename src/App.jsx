@@ -182,6 +182,11 @@ export default function App() {
       .catch(() => setAutoSave('failed'));
   }, [result, playerName]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Outside a game the music is calm again.
+  useEffect(() => {
+    if (phase !== 'play' && phase !== 'paused') sfx.setTension(0);
+  }, [phase]);
+
   // Behind a page nothing needs to move (and a game that just ended stays as it was).
   const isPageShown = PAGES.includes(phase);
   useEffect(() => {
@@ -234,7 +239,10 @@ export default function App() {
           setSpecialNote({ piece, text: piece.frozen ? FROZEN_NOTE : SPECIAL_NOTES[piece.tier], id: performance.now() });
         }
       },
-      onDanger: setDanger,
+      onDanger: (level) => {
+        setDanger(level);
+        sfx.setTension(level);
+      },
       onHelpers: setHelpers,
       onBoom: () => {
         haptic('heavy');

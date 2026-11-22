@@ -21,8 +21,8 @@ const ART = {
 };
 
 /**
- * The three helpers under the jar. Shake makes everything jump; Pop removes one piece you tap; Hold puts the
- * waiting piece aside (or swaps it back). Shake and Pop are earned by scoring: the bar shows the next one filling.
+ * The three helpers under the jar, each with two words saying what it does (the owner asked what Hold is). Shake
+ * makes everything jump; Pop removes one piece you tap; Hold puts the waiting piece aside (or swaps it back). Shake and Pop are earned by scoring: the bar shows the next one filling.
  * @param helpers { shake, pop, charge, held, canHold } from the game
  */
 export default function HelperBar({ helpers, isPopping, onShake, onPop, onHold }) {
@@ -31,7 +31,10 @@ export default function HelperBar({ helpers, isPopping, onShake, onPop, onHold }
       <div className="helper-row">
         <button className="helper" onClick={onShake} disabled={helpers.shake < 1} aria-label={`Shake the jar, ${helpers.shake} left`}>
           {ART.shake}
-          <span>Shake</span>
+          <span>
+            Shake
+            <small>jiggle all</small>
+          </span>
           <i aria-hidden="true">{helpers.shake}</i>
         </button>
         <button
@@ -42,7 +45,10 @@ export default function HelperBar({ helpers, isPopping, onShake, onPop, onHold }
           aria-label={`Pop a slime, ${helpers.pop} left`}
         >
           {ART.pop}
-          <span>Pop</span>
+          <span>
+            Pop
+            <small>remove one</small>
+          </span>
           <i aria-hidden="true">{helpers.pop}</i>
         </button>
         <button
@@ -52,7 +58,10 @@ export default function HelperBar({ helpers, isPopping, onShake, onPop, onHold }
           aria-label={helpers.held ? 'Swap with the slime you put aside' : 'Put this slime aside'}
         >
           {helpers.held ? <SlimeIcon tier={helpers.held.tier} frozen={helpers.held.frozen} size={28} /> : ART.hold}
-          <span>Hold</span>
+          <span>
+            {helpers.held ? 'Swap' : 'Hold'}
+            <small>{helpers.held ? 'use the saved one' : 'save for later'}</small>
+          </span>
         </button>
       </div>
       <div className="helper-meter" role="img" aria-label={`Next helper ${Math.round(helpers.charge * 100)}% ready`}>
