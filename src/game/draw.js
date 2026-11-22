@@ -72,13 +72,134 @@ function crown(ctx, r) {
   ctx.restore();
 }
 
+/** The hats from the Slime book (goals.js), drawn on top of a slime of radius r. */
+const HAT_ART = {
+  top(ctx, r) {
+    ctx.fillStyle = '#2A1D3A';
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.62, -r * 0.92, r * 1.24, r * 0.16, r * 0.08);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.38, -r * 1.42, r * 0.76, r * 0.56, r * 0.07);
+    ctx.fill();
+    ctx.fillStyle = '#FF7AA8';
+    ctx.fillRect(-r * 0.38, -r * 1.02, r * 0.76, r * 0.1);
+  },
+  bow(ctx, r) {
+    ctx.fillStyle = '#FF7AA8';
+    ctx.strokeStyle = '#D94F84';
+    ctx.lineWidth = Math.max(1, r * 0.04);
+    ctx.lineJoin = 'round';
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.92);
+      ctx.lineTo(sx * r * 0.46, -r * 1.2);
+      ctx.lineTo(sx * r * 0.46, -r * 0.68);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#D94F84';
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.93, r * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+  },
+  party(ctx, r) {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.36, -r * 0.84);
+    ctx.lineTo(0, -r * 1.6);
+    ctx.lineTo(r * 0.36, -r * 0.84);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(-r * 0.36, 0, r * 0.36, 0);
+    g.addColorStop(0, '#7CC8FF');
+    g.addColorStop(0.5, '#B4A2FF');
+    g.addColorStop(1, '#FF9CC6');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.fillStyle = '#FFD45E';
+    ctx.beginPath();
+    ctx.arc(0, -r * 1.6, r * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+  },
+  cool(ctx, r) {
+    const y = r * 0.06;
+    ctx.fillStyle = '#2A1D3A';
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.roundRect(sx * r * 0.3 - r * 0.24, y - r * 0.15, r * 0.48, r * 0.32, r * 0.12);
+      ctx.fill();
+    }
+    ctx.fillRect(-r * 0.1, y - r * 0.09, r * 0.2, r * 0.07);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    for (const sx of [-1, 1]) ctx.fillRect(sx * r * 0.3 - r * 0.15, y - r * 0.1, r * 0.12, r * 0.06);
+  },
+  flower(ctx, r) {
+    ctx.save();
+    ctx.translate(r * 0.42, -r * 0.84);
+    ctx.fillStyle = '#FFFFFF';
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * r * 0.16, Math.sin(a) * r * 0.16, r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#FFD45E';
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  },
+  crown,
+};
+
+/** Hats sit on slimes big enough to carry one. */
+export const HAT_MIN_R = 26;
+
+function iceBlock(ctx, r) {
+  const a = r * 1.08;
+  ctx.beginPath();
+  ctx.roundRect(-a, -a, a * 2, a * 2, r * 0.32);
+  ctx.fillStyle = 'rgba(190,233,255,0.5)';
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, r * 0.07);
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.stroke();
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-a * 0.7, -a * 0.35);
+  ctx.lineTo(-a * 0.35, -a * 0.7);
+  ctx.moveTo(a * 0.4, a * 0.72);
+  ctx.lineTo(a * 0.72, a * 0.4);
+  ctx.stroke();
+}
+
+function fuse(ctx, r, t, lit) {
+  ctx.strokeStyle = '#8A6A3A';
+  ctx.lineWidth = Math.max(1.5, r * 0.12);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(r * 0.35, -r * 0.85);
+  ctx.quadraticCurveTo(r * 0.6, -r * 1.35, r * 0.95, -r * 1.2);
+  ctx.stroke();
+  // The spark: quiet until the fuse is lit, then flashing faster as it burns down.
+  const flash = lit > 0 ? 0.6 + 0.4 * Math.sin(t * (0.02 + lit * 0.05)) : 0.75;
+  ctx.fillStyle = lit > 0 ? '#FF7A3D' : '#FFD45E';
+  ctx.beginPath();
+  ctx.arc(r * 0.98, -r * 1.2, r * (0.16 + 0.12 * flash), 0, Math.PI * 2);
+  ctx.fill();
+}
+
 /**
- * Draw a slime (tier >= 0) or a rock (tier < 0) centred at x,y.
- * opts: j (squash), t (time ms), seed, lookX/lookY (-1..1), blink, worried, alpha, px (device px per unit)
+ * Draw a slime (tier >= 0), a rock (-1), a rainbow (-2) or a bomb (-3) centred at x,y.
+ * opts: j (squash), t (time ms), seed, lookX/lookY (-1..1), blink, worried, alpha, px (device px per unit),
+ *       frozen (in an ice block), hat (a HAT_ART id; forceHat puts it on small slimes too, for icons),
+ *       fuse (0 = not lit … 1 = about to go off)
  */
 export function drawSlime(ctx, x, y, r, tier, opts = {}) {
   const { j = 0, t = 0, seed = 0, lookX = 0, lookY = 0, blink = false, worried = false, alpha = 1, px = 1 } = opts;
-  const rock = tier < 0;
+  const rock = tier === -1;
+  const rainbow = tier === -2;
+  const bomb = tier === -3;
   const s = shades(tierInfo(tier).color);
 
   ctx.save();
@@ -92,7 +213,13 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
   g.addColorStop(0, s.light);
   g.addColorStop(0.5, s.base);
   g.addColorStop(1, s.dark);
-  ctx.fillStyle = g;
+  if (rainbow) {
+    // Every slime color at once, slowly turning.
+    const turn = t * 0.0006 + seed;
+    const band = ctx.createLinearGradient(Math.cos(turn) * -r, Math.sin(turn) * -r, Math.cos(turn) * r, Math.sin(turn) * r);
+    ['#FF9CC6', '#FFD45E', '#7EE8C7', '#7CC8FF', '#C285FF'].forEach((color, i) => band.addColorStop(i / 4, color));
+    ctx.fillStyle = band;
+  } else ctx.fillStyle = g;
   ctx.shadowColor = 'rgba(50,25,90,0.25)';
   ctx.shadowBlur = r * 0.45 * px;
   ctx.shadowOffsetY = r * 0.16 * px;
@@ -122,6 +249,7 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
   ctx.restore();
 
   // Specular highlight
+  if (bomb) fuse(ctx, r, t, opts.fuse ?? 0);
   if (!rock) {
     ctx.save();
     ctx.translate(-r * 0.36, -r * 0.46);
@@ -142,7 +270,7 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
   }
 
   // Face
-  const ink = '#2A1D3A';
+  const ink = bomb ? '#FFFFFF' : '#2A1D3A';
   const fy = r * 0.08;
   const ex = r * 0.3;
   const er = Math.max(1.4, r * 0.12);
@@ -153,7 +281,7 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
   ctx.lineCap = 'round';
   ctx.lineWidth = Math.max(1, r * 0.05);
 
-  if (rock || blink) {
+  if (rock || blink || opts.frozen) {
     for (const sx of [-1, 1]) {
       ctx.beginPath();
       ctx.moveTo(sx * ex - er * 0.8, fy);
@@ -166,7 +294,7 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
       ctx.ellipse(sx * ex + lx, fy + ly, er, er * 1.18, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = bomb ? '#4A4160' : '#fff';
     for (const sx of [-1, 1]) {
       ctx.beginPath();
       ctx.arc(sx * ex + lx - er * 0.32, fy + ly - er * 0.42, er * 0.38, 0, Math.PI * 2);
@@ -175,7 +303,7 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
   }
 
   // Cheeks
-  if (!rock && r >= 18) {
+  if (!rock && !bomb && r >= 18) {
     ctx.fillStyle = 'rgba(255,110,150,0.35)';
     for (const sx of [-1, 1]) {
       ctx.beginPath();
@@ -201,6 +329,13 @@ export function drawSlime(ctx, x, y, r, tier, opts = {}) {
     ctx.stroke();
   }
 
+  // The King always wears its crown; other slimes wear the player's hat when they are big enough for it.
   if (tier === 9) crown(ctx, r);
+  else if (tier >= 0 && opts.hat && (r >= HAT_MIN_R || opts.forceHat) && HAT_ART[opts.hat]) {
+    ctx.save();
+    HAT_ART[opts.hat](ctx, r);
+    ctx.restore();
+  }
+  if (opts.frozen) iceBlock(ctx, r);
   ctx.restore();
 }

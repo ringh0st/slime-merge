@@ -9,6 +9,17 @@ A squishy physics merge puzzle built with React and Matter.js.
 - After a while **rocks** start dropping. They can't merge and only crack when a merge happens beside them.
 - If anything stays above the dashed line for too long, the jar overflows and the game ends.
 
+## What's in the game
+
+- **Special pieces** (`src/game/tiers.js`, `engine.js`): now and then a **Rainbow** drops (it becomes whatever slime it touches and merges with it), a **Bomb** (pops everything close a moment after it lands) or a **Frozen** slime (can't merge until a merge happens beside it). Rocks are still there.
+- **Jars** (`src/game/jars.js`, `JarPicker`): Classic, Honey (slow and sticky), Space (floaty) and the Fish bowl (round bottom, bubbles lift small slimes). A jar opens once you've scored enough points in total, over all games.
+- **Helpers** (`HelperBar`): **Shake** makes everything jump, **Pop** removes the piece you tap, **Hold** puts the waiting piece aside. You start with one Shake and one Pop and earn more by scoring (the bar under the buttons fills).
+- **Daily jar** (`src/daily.js`, `DailyCard`): one jar a day (UTC) with the same pieces for everyone and one try, its own board and a share button.
+- **Jar club** (`src/club.js`, `Club`): a private board for family and friends, joined with a short code like `JELLY-4821`. No accounts. The menu tells you when someone in the club passes you.
+- **Slime book and hats** (`src/game/goals.js`, `SlimeBook`): every slime you've made, the special pieces, and six goals that each unlock a hat. Tap an unlocked hat to put it on the bigger slimes in the jar (and on your slime on the boards).
+
+Everything a player earns is kept on their device; only saved scores go to the server.
+
 ## Play on your phone
 
 Open the GitHub Pages link on your phone, then:
@@ -33,6 +44,7 @@ After changing the web code locally, run `npm run build && npx cap sync` to copy
 | --- | --- | --- |
 | Aim | drag / move | ← → or A D |
 | Drop | release / click | Space or ↓ |
+| Hold | Hold button | H |
 | Pause | ⏸ button | Esc or P |
 
 ## Develop
@@ -50,4 +62,4 @@ The look follows current UI trends: soft, toy-like 3D forms, frosted-glass panel
 
 ## Records
 
-After a game, players can save their score under a name and see the best of the week, the month and all time (`src/records.js`, `Records`, `SaveScore`). No accounts. The scores live in a Supabase table reached only through two functions; run `supabase/slime_records.sql` once in the Supabase SQL Editor to set it up.
+After a game, players can save their score under a name and see the best of the week, the month and all time (`src/records.js`, `Records`, `SaveScore`). No accounts. The scores live in a Supabase table reached only through a few functions (world, club and daily boards); run `supabase/slime_records.sql` in the Supabase SQL Editor to set it up, and run it again whenever that file changes. Until it has been run again, the world records keep working and the club and daily boards say they aren't ready yet.

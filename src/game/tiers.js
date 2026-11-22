@@ -21,4 +21,17 @@ export const POINTS = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55];
 // Relative odds of each droppable tier.
 export const DROP_WEIGHTS = [32, 26, 20, 13, 9];
 
-export const tierInfo = (t) => (t < 0 ? ROCK : TIERS[t]);
+// Special pieces that drop now and then. A rainbow becomes whatever slime it touches and merges with it;
+// a bomb pops everything close to it a moment after it lands.
+export const RAINBOW = { name: 'Rainbow', r: 22, color: '#FFFFFF' };
+export const BOMB = { name: 'Bomb', r: 22, color: '#4A4160' };
+export const ROCK_TIER = -1;
+export const RAINBOW_TIER = -2;
+export const BOMB_TIER = -3;
+
+const SPECIALS = { [ROCK_TIER]: ROCK, [RAINBOW_TIER]: RAINBOW, [BOMB_TIER]: BOMB };
+
+export const tierInfo = (t) => (t < 0 ? SPECIALS[t] : TIERS[t]);
+
+/** What a piece is called on the Next panel (a frozen slime says so). */
+export const pieceName = (piece) => (piece.frozen ? `Frozen ${TIERS[piece.tier].name}` : tierInfo(piece.tier).name);

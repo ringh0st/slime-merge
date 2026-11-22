@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { nameProblem, saveScore } from '../records.js';
 
-/** On the game-over card: type a name and save this score to the shared records. */
-export default function SaveScore({ score, initialName, onSaved }) {
+/**
+ * On the game-over card: type a name and save this score to the shared records.
+ * @param extras what goes with the score: { club, daily, top, hat } (see saveScore)
+ */
+export default function SaveScore({ score, initialName, extras, onSaved }) {
   const [name, setName] = useState(initialName);
   const [status, setStatus] = useState('idle');
   const [problem, setProblem] = useState(null);
@@ -14,7 +17,7 @@ export default function SaveScore({ score, initialName, onSaved }) {
     setStatus('saving');
     setProblem(null);
     try {
-      onSaved(await saveScore(name, score));
+      onSaved(await saveScore(name, score, extras));
     } catch (error) {
       setProblem(error.message);
       setStatus('idle');

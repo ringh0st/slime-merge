@@ -1,0 +1,21 @@
+// The daily jar: one jar a day, the same pieces for everyone, one try. A day is a UTC day, so it is the same jar
+// all over the world.
+const DAY_MS = 86400000;
+
+export const dayKey = (date = new Date()) => date.toISOString().slice(0, 10);
+
+/** The seven days of the week that holds `today` (Monday first), as day keys. */
+export function weekOf(today = new Date()) {
+  const monday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  monday.setTime(monday.getTime() - ((monday.getUTCDay() + 6) % 7) * DAY_MS);
+  return Array.from({ length: 7 }, (_, i) => dayKey(new Date(monday.getTime() + i * DAY_MS)));
+}
+
+/** The scores of the played days with a new one added, keeping only the last three weeks. */
+export function withDailyScore(played, day, score) {
+  const cutoff = dayKey(new Date(Date.now() - 21 * DAY_MS));
+  return Object.fromEntries(Object.entries({ ...played, [day]: score }).filter(([key]) => key >= cutoff));
+}
+
+/** "22 Nov" for a day key. */
+export const dayLabel = (day) => new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });

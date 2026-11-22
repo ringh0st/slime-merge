@@ -852,3 +852,484 @@ h2 {
     min-height: 120px;
   }
 }
+
+/* ================= Jars, helpers, daily jar, club, slime book ================= */
+
+/* Board rows now carry the player's slime. */
+.record-row {
+  grid-template-columns: 26px 34px 1fr auto;
+  gap: 6px;
+}
+.record-list {
+  min-height: 150px;
+  max-height: 36vh;
+}
+.card.daily .record-list,
+.card.club .record-list {
+  min-height: 84px;
+  max-height: 26vh;
+}
+
+/* Cards with several parts: a column with even gaps. */
+.card.menu,
+.card.club,
+.card.daily,
+.card.jars,
+.card.book {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.card.menu h1 {
+  font-size: clamp(32px, 9.5vw, 44px);
+}
+.card.menu .tag,
+.card .sub {
+  margin: 0;
+}
+.card.menu .howto {
+  margin: 0;
+}
+
+/* The second big button on the menu: the daily jar, with a dot while today's is still unplayed. */
+.btn.alt {
+  position: relative;
+  background: linear-gradient(180deg, #ff9cc0, var(--accent-2));
+  box-shadow:
+    0 6px 0 #d94f84,
+    0 14px 24px -8px rgba(217, 79, 132, 0.55),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.btn.alt:active {
+  box-shadow:
+    0 1px 0 #d94f84,
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.btn.alt.fresh::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffd45e;
+  box-shadow: 0 0 0 3px var(--glass-strong);
+}
+.card.menu .menu-actions .btn {
+  padding: 12px 22px;
+  font-size: 19px;
+}
+.btn.ghost.quiet {
+  color: var(--muted);
+  box-shadow: none;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+/* Four small doors under Play: jars, club, book, records. */
+.menu-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+.menu-tiles button {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 9px 2px 7px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1.5px var(--glass-border);
+  font: 600 12.5px 'Fredoka', system-ui, sans-serif;
+  transition: transform 0.08s ease;
+}
+.menu-tiles button:active {
+  transform: scale(0.95);
+}
+.menu-tiles button:focus-visible,
+.helper:focus-visible,
+.jar-tile:focus-visible,
+.hat-btn:focus-visible,
+.chip-btn:focus-visible,
+.passed:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.passed {
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--accent-2) 22%, var(--glass-strong));
+  font: 500 14px 'DM Sans', system-ui, sans-serif;
+}
+
+/* ---------- Under the jar: the evolution strip on menus, the helpers in a game ---------- */
+.foot {
+  display: grid;
+  justify-items: center;
+  max-width: 100%;
+}
+.helpers {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+}
+.helper-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.helper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--glass-strong);
+  box-shadow:
+    0 4px 0 color-mix(in oklab, var(--accent) 28%, transparent),
+    inset 0 0 0 1.5px var(--glass-border);
+  font: 600 15px 'Fredoka', system-ui, sans-serif;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+}
+.helper:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 color-mix(in oklab, var(--accent) 28%, transparent),
+    inset 0 0 0 1.5px var(--glass-border);
+}
+.helper:disabled {
+  opacity: 0.45;
+}
+.helper.on {
+  box-shadow:
+    0 4px 0 #d94f84,
+    inset 0 0 0 2.5px var(--accent-2);
+}
+.helper i {
+  position: absolute;
+  top: -7px;
+  right: -3px;
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  color: #fff;
+  background: var(--accent);
+  font: 700 13px 'Fredoka', system-ui, sans-serif;
+}
+.helper-meter,
+.meter {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--glass);
+  overflow: hidden;
+}
+.helper-meter span,
+.meter span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.4s ease;
+}
+
+/* Popping: the jar asks for a tap on a slime. */
+.jar.is-popping canvas {
+  cursor: pointer;
+}
+.jar.is-popping {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    0 0 0 4px color-mix(in oklab, var(--accent-2) 55%, transparent),
+    0 40px 60px -30px var(--shadow);
+}
+.pop-hint,
+.daily-tag {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  padding: 5px 14px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--accent-2);
+  font: 600 14px 'Fredoka', system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.daily-tag {
+  left: auto;
+  right: 10px;
+  top: 10px;
+  transform: none;
+  background: color-mix(in oklab, var(--accent) 80%, transparent);
+  font-size: 12px;
+  padding: 3px 10px;
+}
+
+/* ---------- The jars' looks (the real jar, its back panel and the small pictures in the picker) ---------- */
+.jar.jar-honey,
+.jar-mini.jar-honey {
+  background: linear-gradient(180deg, rgba(255, 214, 120, 0.5), rgba(255, 190, 70, 0.62));
+}
+.jar.jar-space,
+.jar-mini.jar-space {
+  background:
+    radial-gradient(1.5px 1.5px at 18% 22%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 72% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 54% 44%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 30% 66%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 84% 58%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 10% 86%, #fff 50%, transparent 51%),
+    linear-gradient(180deg, #2a2350, #3b2a6e);
+}
+.jar.jar-bowl,
+.jar-mini.jar-bowl {
+  background: linear-gradient(180deg, rgba(190, 236, 248, 0.45), rgba(120, 205, 232, 0.6));
+}
+/* The fish bowl's round bottom: half a circle as wide as the jar (the jar is 2 wide by 3 tall). */
+.jar.jar-bowl,
+.jar-back.jar-bowl {
+  border-radius: 22px 22px 50% 50% / 22px 22px 33.4% 33.4%;
+}
+
+.jar-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.jar-tile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 6px 9px;
+  border: 0;
+  border-radius: 18px;
+  color: var(--ink);
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1.5px var(--glass-border);
+  font: 500 12px 'DM Sans', system-ui, sans-serif;
+}
+.jar-tile b {
+  font: 600 16px 'Fredoka', system-ui, sans-serif;
+}
+.jar-tile small {
+  color: var(--muted);
+}
+.jar-tile.on {
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+.jar-tile:disabled .jar-mini {
+  filter: grayscale(0.7);
+  opacity: 0.6;
+}
+.jar-mini {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 78px;
+  padding-bottom: 4px;
+  border-radius: 14px;
+  border: 1.5px solid var(--glass-border);
+  background: var(--glass);
+  overflow: hidden;
+}
+.jar-mini.jar-bowl {
+  border-radius: 14px 14px 50% 50% / 14px 14px 60% 60%;
+}
+.jar-mini.tiny {
+  width: 34px;
+  height: 38px;
+  flex: none;
+}
+.lock {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--ink);
+}
+
+/* ---------- Daily jar ---------- */
+.week {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.week li {
+  display: grid;
+  justify-items: center;
+  padding: 5px 0 3px;
+  border-radius: 12px;
+  background: var(--glass);
+  font: 700 13px 'Fredoka', system-ui, sans-serif;
+  line-height: 1.15;
+  min-height: 40px;
+}
+.week li.done {
+  color: #fff;
+  background: var(--accent);
+}
+.week li.today {
+  box-shadow: 0 0 0 3px var(--accent-2);
+}
+.card.daily .badge {
+  margin: 0;
+}
+
+/* ---------- Club ---------- */
+.club-code {
+  font: 700 30px 'Fredoka', system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.chip-btn {
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1.5px var(--glass-border);
+  font: 600 14px 'Fredoka', system-ui, sans-serif;
+}
+.card .eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+}
+.card.small .eyebrow {
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: var(--ink);
+}
+
+/* ---------- Slime book ---------- */
+.book-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.book-grid li {
+  display: grid;
+  justify-items: center;
+  padding: 4px 0 3px;
+  border-radius: 12px;
+  background: var(--glass);
+}
+.book-grid li:not(.on) .slime-icon {
+  filter: grayscale(1) brightness(0.6) opacity(0.3);
+}
+.book-grid small {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.special-list,
+.goal-list,
+.unlocked {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+}
+.special-list li,
+.unlocked li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 12px;
+  background: var(--glass);
+  font-size: 13px;
+  line-height: 1.25;
+}
+.unlocked li {
+  background: color-mix(in oklab, #ffd45e 35%, var(--glass-strong));
+  font-weight: 500;
+}
+.unlocked b {
+  display: block;
+  font-family: 'Fredoka', system-ui, sans-serif;
+}
+.goal-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hat-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1.5px var(--glass-border);
+}
+.hat-btn:disabled .slime-icon {
+  filter: grayscale(1) opacity(0.35);
+}
+.hat-btn.on {
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+.goal-text {
+  flex: 1;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+.goal-text b {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+}
+.goal-text small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.goal-list li.done .meter span {
+  background: #5fd39a;
+}

@@ -1,5 +1,7 @@
 import Matter from 'matter-js';
-import { TIERS, ROCK, POINTS, DROP_WEIGHTS, tierInfo } from './tiers.js';
+import { TIERS, ROCK, POINTS, DROP_WEIGHTS, ROCK_TIER, RAINBOW_TIER, BOMB_TIER, tierInfo } from './tiers.js';
+import { JARS } from './jars.js';
+import { randomFrom } from './random.js';
 import { drawSlime } from './draw.js';
 import { sfx } from './audio.js';
 
@@ -13,16 +15,16 @@ const DROP_Y = 48;
 const STEP = 1000 / 120;
 const OVER_MS = 2600;
 const COMBO_MS = 1200;
-
-function pickTier() {
-  const total = DROP_WEIGHTS.reduce((a, b) => a + b, 0);
-  let x = Math.random() * total;
-  for (let i = 0; i < DROP_WEIGHTS.length; i++) {
-    x -= DROP_WEIGHTS[i];
-    if (x < 0) return i;
-  }
-  return 0;
-}
+// Special pieces: none in the first drops, then about one drop in eleven.
+const SPECIALS_FROM_DROP = 8;
+const SPECIAL_CHANCE = 0.09;
+const BOMB_FUSE_MS = 900;
+const BOMB_REACH = 72;
+// Helpers: the player starts with one Shake and one Pop, earns more by scoring, and holds at most three of each.
+const HELPER_COST = 350;
+const HELPER_CAP = 3;
+const KIND_OF = { [ROCK_TIER]: 'rock', [RAINBOW_TIER]: 'rainbow', [BOMB_TIER]: 'bomb' };
+const ICE = '#BFE9FF';
 
 export class Game {
   constructor(canvas, cb = {}) {
@@ -31,7 +33,10 @@ export class Game {
     this.cb = cb;
     this.scale = 1;
     this.dpr = 1;
-    this.engine = Engine.create({ gravity: { y: 1.1 }, positionIterations: 8, velocityIterations: 6 });
+    this.jar = JARS[0];
+    this.hat = null;
+    this.rng = Math.random;
+    this.engine = Engine.create({ gravity: { y: this.jar.gravity }, positionIterations: 8, velocityIterations: 6 });
     this.world = this.engine.world;
     this.pending = [];
     this.particles = [];
@@ -67,20 +72,69 @@ export class Game {
   }
 
   buildWalls() {
+    if (this.walls) Composite.remove(this.world, this.walls);
     const T = 100;
     const opts = { isStatic: true, friction: 0.5, restitution: 0.1 };
-    Composite.add(this.world, [
+    this.walls = [
       Bodies.rectangle(W / 2, H + T / 2, W + T * 2, T, opts),
       Bodies.rectangle(-T / 2, H / 2 - H, T, H * 3, opts),
       Bodies.rectangle(W + T / 2, H / 2 - H, T, H * 3, opts),
-    ]);
+    ];
+    if (this.jar.isRound) {
+      // A round bottom: short flat pieces along a half circle as wide as the jar.
+      const R = W / 2;
+      const N = 18;
+      for (let i = 0; i < N; i++) {
+        const a = ((i + 0.5) / N) * Math.PI;
+        const piece = Bodies.rectangle(R + Math.cos(a) * (R + 20), H - R + Math.sin(a) * (R + 20), 40, (Math.PI * R) / N + 10, opts);
+        Body.setAngle(piece, a);
+        this.walls.push(piece);
+      }
+    }
+    Composite.add(this.world, this.walls);
+  }
+
+  /** Switch to another jar (only between games): its gravity, feel and shape. */
+  setJar(jar) {
+    this.jar = jar;
+    this.engine.gravity.y = jar.gravity;
+    this.buildWalls();
+  }
+
+  /** The hat every bigger slime wears (null for none). */
+  setHat(hat) {
+    this.hat = hat;
+  }
+
+  pickTier() {
+    const total = DROP_WEIGHTS.reduce((a, b) => a + b, 0);
+    let x = this.rng() * total;
+    for (let i = 0; i < DROP_WEIGHTS.length; i++) {
+      x -= DROP_WEIGHTS[i];
+      if (x < 0) return i;
+    }
+    return 0;
+  }
+
+  /** The piece after the one now waiting: a slime, or now and then a rock or a special. */
+  pickPiece() {
+    // Rocks start showing up after a while, then every 7th drop.
+    if (this.drops >= 18 && this.drops % 7 === 0) return { tier: ROCK_TIER };
+    if (this.drops >= SPECIALS_FROM_DROP && this.rng() < SPECIAL_CHANCE) {
+      const pick = this.rng();
+      if (pick < 0.4) return { tier: RAINBOW_TIER };
+      if (pick < 0.7) return { tier: BOMB_TIER };
+      return { tier: this.pickTier(), frozen: true };
+    }
+    return { tier: this.pickTier() };
   }
 
   bodies() {
     return Composite.allBodies(this.world).filter((b) => b.plugin && b.plugin.kind);
   }
 
-  reset(mode) {
+  reset(mode, seed = null) {
+    this.rng = randomFrom(seed);
     for (const b of this.bodies()) Composite.remove(this.world, b);
     this.pending.length = 0;
     this.particles.length = 0;
@@ -98,17 +152,94 @@ export class Game {
     this.over = false;
     this.paused = false;
     this.nextDemo = 0;
-    this.current = pickTier();
-    this.next = pickTier();
+    this.current = { tier: this.pickTier() };
+    this.next = { tier: this.pickTier() };
+    this.held = null;
+    this.canHold = true;
+    this.helpers = { shake: 1, pop: 1 };
+    this.charge = 0;
+    this.nextBubble = 2500;
+    // Counted for the goals (goals.js).
+    this.run = { kings: 0, rocks: 0, maxCombo: 0, rainbows: 0 };
     if (mode === 'play') {
       this.cb.onScore?.(0);
       this.cb.onNext?.(this.next);
       this.cb.onDanger?.(0);
+      this.cb.onHelpers?.(this.helperState());
     }
   }
 
-  start() {
-    this.reset('play');
+  /** Start a game. With a seed (the daily jar) the same pieces drop for everyone. */
+  start(seed = null) {
+    this.reset('play', seed);
+  }
+
+  helperState() {
+    return { ...this.helpers, charge: this.charge, held: this.held, canHold: this.canHold };
+  }
+
+  /** Points fill the helper meter; a full meter gives one more of whichever helper is lower. */
+  addScore(points) {
+    this.score += points;
+    this.cb.onScore?.(this.score);
+    this.charge += points / HELPER_COST;
+    while (this.charge >= 1) {
+      this.charge -= 1;
+      const kind = this.helpers.shake <= this.helpers.pop ? 'shake' : 'pop';
+      if (this.helpers[kind] < HELPER_CAP) {
+        this.helpers[kind]++;
+        sfx.helper();
+      }
+    }
+    this.cb.onHelpers?.(this.helperState());
+  }
+
+  /** Helper: everything in the jar jumps, so slimes that almost touch can meet. */
+  shake() {
+    if (this.mode !== 'play' || this.over || this.paused || this.helpers.shake < 1) return false;
+    this.helpers.shake--;
+    for (const b of this.bodies()) {
+      Body.setVelocity(b, { x: b.velocity.x + (Math.random() - 0.5) * 14, y: b.velocity.y - 5 - Math.random() * 5 });
+      b.plugin.jv += 2;
+    }
+    sfx.shake();
+    this.cb.onHelpers?.(this.helperState());
+    return true;
+  }
+
+  /** Helper: pop the piece at a point of the jar (no points for it). */
+  popAt(x, y) {
+    if (this.mode !== 'play' || this.over || this.paused || this.helpers.pop < 1) return false;
+    const hit = this.bodies()
+      .map((b) => ({ b, d: Math.hypot(b.position.x - x, b.position.y - y) - b.plugin.r }))
+      .filter(({ d }) => d < 10)
+      .sort((p, q) => p.d - q.d)[0];
+    if (!hit) return false;
+    this.helpers.pop--;
+    const { b } = hit;
+    Composite.remove(this.world, b);
+    this.burst(b.position.x, b.position.y, b.plugin.frozen ? ICE : tierInfo(b.plugin.tier).color, 18, b.plugin.r);
+    this.ring(b.position.x, b.position.y, b.plugin.r, '#FF7AA8');
+    sfx.pop();
+    this.cb.onHelpers?.(this.helperState());
+    return true;
+  }
+
+  /** Helper: put the waiting piece aside, or swap it with the one put aside. Once per drop, free. */
+  hold() {
+    if (this.mode !== 'play' || this.over || this.paused || !this.canHold) return false;
+    if (this.held) {
+      [this.held, this.current] = [this.current, this.held];
+    } else {
+      this.held = this.current;
+      this.current = this.next;
+      this.next = this.pickPiece();
+      this.cb.onNext?.(this.next);
+    }
+    this.canHold = false;
+    sfx.click();
+    this.cb.onHelpers?.(this.helperState());
+    return true;
   }
 
   setPaused(p) {
@@ -125,7 +256,7 @@ export class Game {
   }
 
   get heldR() {
-    return tierInfo(this.current).r;
+    return tierInfo(this.current.tier).r;
   }
 
   clampAim() {
@@ -133,19 +264,20 @@ export class Game {
     return Math.min(W - r - 2, Math.max(r + 2, this.aimX));
   }
 
-  spawn(tier, x, y, vel) {
+  spawn(tier, x, y, vel, frozen = false) {
     const r = tierInfo(tier).r;
     const b = Bodies.circle(x, y, r, {
-      restitution: 0.1,
-      friction: 0.35,
+      restitution: this.jar.bounce,
+      friction: this.jar.friction,
       frictionStatic: 0.5,
-      frictionAir: 0.012,
-      density: tier < 0 ? 0.004 : 0.0012,
+      frictionAir: this.jar.air,
+      density: tier === ROCK_TIER ? 0.004 : 0.0012,
       slop: 0.03,
     });
     b.plugin = {
-      kind: tier < 0 ? 'rock' : 'slime',
+      kind: KIND_OF[tier] ?? 'slime',
       tier,
+      frozen,
       r,
       born: this.simTime,
       j: 0,
@@ -161,15 +293,16 @@ export class Game {
 
   drop() {
     if (this.mode !== 'play' || !this.canDrop || this.over || this.paused) return false;
-    const b = this.spawn(this.current, this.clampAim(), DROP_Y, { x: 0, y: 1 });
+    const b = this.spawn(this.current.tier, this.clampAim(), DROP_Y, { x: 0, y: 1 }, Boolean(this.current.frozen));
     b.plugin.jv = -1.4; // stretch as it falls
     this.drops++;
     this.canDrop = false;
     this.dropReadyAt = this.simTime + 480;
     this.current = this.next;
-    // Rocks start showing up after a while, then every 7th drop.
-    this.next = this.drops >= 18 && this.drops % 7 === 0 ? -1 : pickTier();
+    this.next = this.pickPiece();
+    this.canHold = true;
     this.cb.onNext?.(this.next);
+    this.cb.onHelpers?.(this.helperState());
     sfx.drop();
     return true;
   }
@@ -185,17 +318,17 @@ export class Game {
         const kick = Math.min(rv, 14) * 0.1;
         if (pa?.kind) pa.jv += kick;
         if (pb?.kind) pb.jv += kick;
+        // A bomb's fuse starts the moment it touches anything.
+        for (const bomb of [pa, pb]) if (bomb?.kind === 'bomb' && !bomb.fuseAt) bomb.fuseAt = this.simTime + BOMB_FUSE_MS;
       }
-      if (
-        pa?.kind === 'slime' &&
-        pb?.kind === 'slime' &&
-        pa.tier === pb.tier &&
-        !pa.merging &&
-        !pb.merging &&
-        !this.over
-      ) {
+      if (this.over || !pa?.kind || !pb?.kind || pa.merging || pb.merging || pa.frozen || pb.frozen) continue;
+      if (pa.kind === 'slime' && pb.kind === 'slime' && pa.tier === pb.tier) {
         pa.merging = pb.merging = true;
         this.pending.push([a, b]);
+      } else if ((pa.kind === 'rainbow' && pb.kind === 'slime') || (pb.kind === 'rainbow' && pa.kind === 'slime')) {
+        // A rainbow becomes the slime it touches, and the two merge where that slime is.
+        pa.merging = pb.merging = true;
+        this.pending.push(pa.kind === 'slime' ? [a, b] : [b, a]);
       }
     }
   }
@@ -207,8 +340,17 @@ export class Game {
     const play = this.mode === 'play';
     for (const [a, b] of list) {
       const t = a.plugin.tier;
-      const x = (a.position.x + b.position.x) / 2;
-      const y = (a.position.y + b.position.y) / 2;
+      const withRainbow = b.plugin.kind === 'rainbow';
+      const x = withRainbow ? a.position.x : (a.position.x + b.position.x) / 2;
+      const y = withRainbow ? a.position.y : (a.position.y + b.position.y) / 2;
+      if (withRainbow) {
+        this.burst(b.position.x, b.position.y, '#FFD45E', 8, b.plugin.r);
+        this.burst(b.position.x, b.position.y, '#7CC8FF', 8, b.plugin.r);
+        if (play) {
+          this.run.rainbows++;
+          sfx.rainbow();
+        }
+      }
       const vx = (a.velocity.x + b.velocity.x) / 2;
       const vy = (a.velocity.y + b.velocity.y) / 2;
       Composite.remove(this.world, a);
@@ -222,6 +364,7 @@ export class Game {
         this.ring(x, y, TIERS[t].r * 1.4, '#FFE27A');
         gained = 250;
         this.crackRocks(x, y, TIERS[t].r * 1.5);
+        this.thawNear(x, y, TIERS[t].r * 1.5);
         if (play) sfx.king();
       } else {
         const nt = t + 1;
@@ -231,6 +374,8 @@ export class Game {
         this.ring(x, y, TIERS[nt].r, TIERS[nt].color);
         gained = POINTS[nt];
         this.crackRocks(x, y, TIERS[nt].r);
+        this.thawNear(x, y, TIERS[nt].r);
+        if (play && nt === TIERS.length - 1) this.run.kings++;
         if (play && nt > this.runMax) {
           this.runMax = nt;
           this.cb.onDiscover?.(nt);
@@ -239,10 +384,10 @@ export class Game {
       if (play) {
         this.combo = this.simTime - this.lastMerge < COMBO_MS ? this.combo + 1 : 1;
         this.lastMerge = this.simTime;
+        this.run.maxCombo = Math.max(this.run.maxCombo, this.combo);
         const pts = Math.round(gained * (1 + (this.combo - 1) * 0.5));
-        this.score += pts;
         this.text(x, y, `+${pts}`, color, this.combo);
-        this.cb.onScore?.(this.score);
+        this.addScore(pts);
         this.cb.onMerge?.(Math.min(t + 1, TIERS.length - 1), this.combo);
         sfx.merge(t + 1, this.combo);
       }
@@ -256,11 +401,54 @@ export class Game {
         Composite.remove(this.world, b);
         this.burst(b.position.x, b.position.y, ROCK.color, 16, b.plugin.r);
         if (this.mode === 'play') {
-          this.score += 10;
+          this.run.rocks++;
           this.text(b.position.x, b.position.y - 10, '+10', ROCK.color, 1);
-          this.cb.onScore?.(this.score);
+          this.addScore(10);
           sfx.rock();
         }
+      }
+    }
+  }
+
+  /** A merge right beside a frozen slime breaks its ice, so it can merge again. */
+  thawNear(x, y, R) {
+    for (const b of this.bodies()) {
+      if (!b.plugin.frozen) continue;
+      if (Math.hypot(b.position.x - x, b.position.y - y) < R + b.plugin.r + 16) {
+        b.plugin.frozen = false;
+        b.plugin.jv += 2;
+        this.burst(b.position.x, b.position.y, ICE, 14, b.plugin.r);
+        if (this.mode === 'play') sfx.thaw();
+      }
+    }
+  }
+
+  /** A bomb goes off: it pops every piece close to it and pushes the rest away. */
+  explode(bomb) {
+    const { x, y } = bomb.position;
+    Composite.remove(this.world, bomb);
+    this.burst(x, y, '#FFB45E', 34, 30);
+    this.burst(x, y, '#4A4160', 16, 20);
+    this.ring(x, y, BOMB_REACH, '#FFB45E');
+    let popped = 0;
+    for (const b of this.bodies()) {
+      const d = Math.hypot(b.position.x - x, b.position.y - y);
+      if (d - b.plugin.r < BOMB_REACH) {
+        Composite.remove(this.world, b);
+        this.burst(b.position.x, b.position.y, b.plugin.frozen ? ICE : tierInfo(b.plugin.tier).color, 10, b.plugin.r);
+        if (b.plugin.kind === 'rock') this.run.rocks++;
+        popped++;
+      } else if (d < BOMB_REACH * 3) {
+        const push = (1 - d / (BOMB_REACH * 3)) * 9;
+        Body.setVelocity(b, { x: b.velocity.x + ((b.position.x - x) / d) * push, y: b.velocity.y + ((b.position.y - y) / d) * push });
+      }
+    }
+    if (this.mode === 'play') {
+      sfx.boom();
+      this.cb.onBoom?.();
+      if (popped) {
+        this.text(x, y, `+${popped * 5}`, '#FFB45E', 1);
+        this.addScore(popped * 5);
       }
     }
   }
@@ -294,7 +482,7 @@ export class Game {
     this.canDrop = false;
     for (const b of this.bodies()) b.plugin.dead = true;
     sfx.over();
-    this.cb.onGameOver?.(this.score, this.runMax);
+    this.cb.onGameOver?.(this.score, this.runMax, this.run);
   }
 
   loop(now) {
@@ -329,6 +517,21 @@ export class Game {
       p.j = Math.max(-0.25, Math.min(0.25, p.j + p.jv * s));
     }
     if (!this.canDrop && this.simTime >= this.dropReadyAt) this.canDrop = true;
+    for (const b of list) if (b.plugin.kind === 'bomb' && b.plugin.fuseAt && this.simTime >= b.plugin.fuseAt) this.explode(b);
+    if (this.jar.hasBubbles && this.mode === 'play') {
+      // The fish bowl: now and then a bubble lifts one of the small slimes.
+      this.nextBubble -= dt;
+      if (this.nextBubble <= 0) {
+        this.nextBubble = 2200 + Math.random() * 1800;
+        const small = list.filter((b) => b.plugin.r < 40 && b.position.y > H * 0.5);
+        const b = small[Math.floor(Math.random() * small.length)];
+        if (b) {
+          Body.setVelocity(b, { x: b.velocity.x + (Math.random() - 0.5) * 3, y: -7 - Math.random() * 3 });
+          this.ring(b.position.x, b.position.y + b.plugin.r, b.plugin.r * 0.8, '#FFFFFF');
+          this.burst(b.position.x, b.position.y + b.plugin.r, '#E8FAFF', 6, b.plugin.r);
+        }
+      }
+    }
 
     if (this.mode === 'play') {
       let high = false;
@@ -349,7 +552,7 @@ export class Game {
       if (this.nextDemo <= 0 && list.length < 16) {
         this.nextDemo = 700;
         const t = Math.floor(Math.random() * 4);
-        this.spawn(t, 40 + Math.random() * (W - 80), -40);
+        this.spawn(t, 80 + Math.random() * (W - 160), -40);
       }
     }
   }
@@ -408,11 +611,13 @@ export class Game {
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
       ctx.fillRect(x - 1, DROP_Y + r, 2, H);
-      drawSlime(ctx, x, DROP_Y + Math.sin(now * 0.004) * 2, r, this.current, {
+      drawSlime(ctx, x, DROP_Y + Math.sin(now * 0.004) * 2, r, this.current.tier, {
         t: now,
         alpha: this.canDrop ? 1 : 0.35,
         px: k,
         lookY: 1,
+        frozen: this.current.frozen,
+        hat: this.hat,
       });
     }
 
@@ -432,6 +637,10 @@ export class Game {
         blink: blink && !p.dead,
         worried: p.dead || (lvl > 0.15 && b.position.y < DANGER_Y + 140),
         px: k,
+        frozen: p.frozen,
+        hat: this.hat,
+        // A lit fuse flashes faster and faster.
+        fuse: p.fuseAt ? 1 - Math.max(0, p.fuseAt - this.simTime) / BOMB_FUSE_MS : 0,
       });
     }
 

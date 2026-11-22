@@ -60,6 +60,26 @@ export const sfx = {
     blip(440, 110, 0.6, { type: 'triangle', vol: 0.14 });
     blip(330, 82, 0.7, { vol: 0.1, delay: 0.12 });
   },
+  boom() {
+    blip(140, 40, 0.35, { type: 'sawtooth', vol: 0.16 });
+    blip(90, 30, 0.45, { type: 'triangle', vol: 0.2, delay: 0.03 });
+  },
+  rainbow() {
+    [660, 880, 1175].forEach((f, i) => blip(f, f * 1.05, 0.14, { type: 'triangle', vol: 0.09, delay: i * 0.05 }));
+  },
+  thaw() {
+    blip(1400, 2200, 0.1, { type: 'triangle', vol: 0.07 });
+  },
+  shake() {
+    [0, 0.07, 0.14].forEach((delay) => blip(300, 180, 0.08, { type: 'triangle', vol: 0.1, delay }));
+  },
+  pop() {
+    blip(900, 300, 0.09, { vol: 0.14 });
+  },
+  helper() {
+    blip(660, 990, 0.12, { type: 'triangle', vol: 0.1 });
+    blip(990, 1320, 0.12, { type: 'triangle', vol: 0.08, delay: 0.08 });
+  },
   click() {
     blip(700, 950, 0.06, { vol: 0.07 });
   },
