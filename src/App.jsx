@@ -131,6 +131,8 @@ export default function App() {
   const canvasRef = useRef(null);
   const tiltRef = useRef(null);
   const shakeRef = useRef(null);
+  // How far the ship jar leans right now (radians).
+  const leanRef = useRef(0);
   const gameRef = useRef(null);
 
   // Players from before the big update first see what is new.
@@ -379,6 +381,10 @@ export default function App() {
           setSpecialNote({ piece, text: piece.frozen ? FROZEN_NOTE : SPECIAL_NOTES[piece.tier], id: performance.now() });
         }
       },
+      onTilt: (angle) => {
+        leanRef.current = angle;
+        tiltRef.current?.style.setProperty('--rz', `${angle}rad`);
+      },
       onDanger: (level) => {
         setDanger(level);
         sfx.setTension(level);
@@ -621,10 +627,21 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [phase, start, togglePause]);
 
-  const toLogical = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    return ((e.clientX - rect.left) / rect.width) * W;
+  /** Where a tap lands inside the jar, in the game's own measures (also right while the ship jar leans). */
+  const toJar = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const dx = e.clientX - (rect.left + rect.width / 2);
+    const dy = e.clientY - (rect.top + rect.height / 2);
+    const lean = leanRef.current;
+    const width = lean ? canvas.offsetWidth : rect.width;
+    const height = lean ? canvas.offsetHeight : rect.height;
+    return {
+      x: ((dx * Math.cos(lean) + dy * Math.sin(lean)) / width + 0.5) * W,
+      y: ((dy * Math.cos(lean) - dx * Math.sin(lean)) / height + 0.5) * gameRef.current.h,
+    };
   };
+  const toLogical = (e) => toJar(e).x;
   const onPointerDown = (e) => {
     if (phase !== 'play' || isPopping) return;
     gameRef.current.setAim(toLogical(e));
@@ -637,8 +654,8 @@ export default function App() {
     if (phase !== 'play') return;
     if (isPopping) {
       // The Pop helper: this tap picks the piece to pop instead of dropping one.
-      const rect = canvasRef.current.getBoundingClientRect();
-      if (gameRef.current.popAt(toLogical(e), ((e.clientY - rect.top) / rect.height) * gameRef.current.h)) {
+      const at = toJar(e);
+      if (gameRef.current.popAt(at.x, at.y)) {
         haptic('medium');
         setIsPopping(false);
       }
@@ -825,7 +842,7 @@ export default function App() {
               </div>
             </>
           )}
-        <div className="tilt" ref={tiltRef}>
+        <div className={`tilt ${shownJar.rocking ? 'is-rocking' : ''}`} ref={tiltRef}>
           <div className={`jar-back jar-${shownJar.id}`} style={{ width: jarW, height: jarH }} />
           <div
             className={`jar jar-${shownJar.id} ${danger > 0.1 ? 'is-danger' : ''} ${isPopping ? 'is-popping' : ''}`}
@@ -852,7 +869,7 @@ export default function App() {
             {danger > 0.12 && phase === 'play' && (
               <div className="overflow-warn" role="alert" style={{ '--left': 1 - danger }}>
                 <b>{Math.max(1, Math.ceil((1 - danger) * OVERFLOW_SECONDS))}</b>
-                <span>Too high!</span>
+                <span>{shownJar.isUpsideDown ? 'Too low!' : 'Too high!'}</span>
               </div>
             )}
             {coach && phase === 'play' && !isPopping && (

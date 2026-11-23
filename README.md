@@ -84,3 +84,20 @@ After a game, players can save their score under a name and see the best of the 
 ## Night mode
 
 The moon/sun button at the top switches between night and light (`src/theme.js`, saved as `slime.theme`; until the player picks, the game follows the device). Styles for night go under `:root[data-theme='dark']`. The Honey, Space and Fish bowl jars have their own night looks.
+
+## Jars
+
+Nine jars (`src/game/jars.js`), each opened by total points and each with its own feel, day look and night look (`.jar-<id>` in styles.css):
+
+- Classic, Honey, Space, Fish bowl: different pull, stickiness and bounce; the bowl is round and bubbles lift small slimes.
+- **Balloon** (`isUpsideDown`): pieces are let go at the bottom, float up on strings and pile under the lid; the danger line is near the bottom ("Too low!").
+- **Ship** (`rocking`): the pull leans left and right, and the jar leans on screen to match (`onTilt`, `--rz`); taps are mapped back through the lean (`toJar` in App.jsx).
+- **Gumball** (`hasPegs`): three bouncy pegs. Their gaps are wider than the biggest piece that can be dropped, so nothing gets stuck on them.
+- **Windy** (`hasWind`): a gust every few seconds, shown by arrows at the side a moment before, pushes everything and small pieces most.
+- **Hourglass** (`hasWaist`): two bulges leave a narrow middle (wide enough for a King).
+
+The daily jar and fights always use Classic.
+
+## Updates reach open copies
+
+`src/update.js` asks for `version.json` (written at build) at every start; an older copy loads the new one. Bump the version in `package.json` for each release.

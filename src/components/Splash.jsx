@@ -1,19 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import SlimeIcon from "./SlimeIcon.jsx";
-import {
-  APP_VERSION,
-  COPYRIGHT_YEAR,
-  GAME_NAME,
-  STUDIO_NAME,
-} from "../appInfo.js";
+import { useEffect, useRef, useState } from 'react';
+import SlimeIcon from './SlimeIcon.jsx';
+import { APP_VERSION, COPYRIGHT_YEAR, GAME_NAME, STUDIO_NAME } from '../appInfo.js';
 
 const SPLASH_MS = 3600;
 const FADE_MS = 420;
-const LINES = [
-  "Filling the jar…",
-  "Waking the slimes…",
-  "Polishing the King’s crown…",
-];
+const LINES = ['Filling the jar…', 'Waking the slimes…', 'Polishing the King’s crown…'];
 
 /**
  * The opening screen: two slimes drop into a little jar and merge into a bigger one, the game's name pops in and a
@@ -26,10 +17,7 @@ export default function Splash({ onDone }) {
 
   useEffect(() => {
     const leave = setTimeout(() => setIsLeaving(true), SPLASH_MS);
-    const lines = setInterval(
-      () => setLine((i) => (i + 1) % LINES.length),
-      SPLASH_MS / LINES.length
-    );
+    const lines = setInterval(() => setLine((i) => (i + 1) % LINES.length), SPLASH_MS / LINES.length);
     ref.current?.focus({ preventScroll: true });
     return () => {
       clearTimeout(leave);
@@ -47,13 +35,11 @@ export default function Splash({ onDone }) {
 
   return (
     <div
-      className={`splash ${isLeaving ? "leaving" : ""}`}
+      className={`splash ${isLeaving ? 'leaving' : ''}`}
       ref={ref}
       tabIndex={-1}
       onClick={skip}
-      onKeyDown={(e) =>
-        (e.key === "Enter" || e.key === "Escape" || e.key === " ") && skip()
-      }
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') && skip()}
       role="dialog"
       aria-modal="true"
       aria-label={`${GAME_NAME}, a ${STUDIO_NAME} production. Version ${APP_VERSION}. Tap to skip.`}
@@ -73,8 +59,8 @@ export default function Splash({ onDone }) {
 
       <h1 className="splash-title" aria-hidden="true">
         {[...GAME_NAME].map((letter, i) => (
-          <span key={i} style={{ "--i": i }}>
-            {letter === " " ? "\u00a0" : letter}
+          <span key={i} style={{ '--i': i }}>
+            {letter === ' ' ? '\u00a0' : letter}
           </span>
         ))}
       </h1>

@@ -292,8 +292,12 @@ button {
   --ry: 0deg;
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transform: rotateX(var(--rx)) rotateY(var(--ry)) rotate(var(--rz, 0rad));
   transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* The ship jar leans a little every frame: no easing in between, or it would lag behind the slimes. */
+.tilt.is-rocking {
+  transition: none;
 }
 .jar-back {
   position: absolute;
@@ -1111,6 +1115,55 @@ h2 {
 .jar-mini.jar-bowl {
   background: linear-gradient(180deg, rgba(190, 236, 248, 0.45), rgba(120, 205, 232, 0.6));
 }
+/* Balloon jar: a sky with clouds. Pieces pile under the lid, so the warnings sit at the bottom. */
+.jar.jar-balloon,
+.jar-mini.jar-balloon {
+  background:
+    radial-gradient(22% 9% at 24% 70%, rgba(255, 255, 255, 0.9) 60%, transparent 62%), radial-gradient(16% 7% at 36% 67%, rgba(255, 255, 255, 0.9) 60%, transparent 62%),
+    radial-gradient(18% 8% at 78% 52%, rgba(255, 255, 255, 0.85) 60%, transparent 62%), radial-gradient(13% 6% at 68% 50%, rgba(255, 255, 255, 0.85) 60%, transparent 62%),
+    linear-gradient(180deg, rgba(150, 210, 255, 0.6), rgba(214, 240, 255, 0.55));
+}
+.jar.jar-balloon.is-danger {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -40px 60px -30px rgba(255, 70, 110, calc(var(--danger) * 0.8)),
+    0 0 0 calc(var(--danger) * 4px) rgba(255, 70, 110, 0.35),
+    0 40px 60px -30px var(--shadow);
+}
+.jar-balloon .overflow-warn {
+  top: auto;
+  bottom: 9%;
+}
+.jar-mini.jar-balloon {
+  align-items: flex-start;
+}
+/* Ship jar: sea air above, waves along the bottom. */
+.jar.jar-ship,
+.jar-mini.jar-ship {
+  background:
+    radial-gradient(14% 5% at 12% 100%, rgba(255, 255, 255, 0.85) 60%, transparent 62%), radial-gradient(14% 5% at 38% 100%, rgba(255, 255, 255, 0.85) 60%, transparent 62%),
+    radial-gradient(14% 5% at 64% 100%, rgba(255, 255, 255, 0.85) 60%, transparent 62%), radial-gradient(14% 5% at 90% 100%, rgba(255, 255, 255, 0.85) 60%, transparent 62%),
+    linear-gradient(180deg, rgba(170, 222, 250, 0.6) 0, rgba(190, 232, 250, 0.55) 70%, rgba(70, 168, 210, 0.7) 100%);
+}
+/* Gumball jar: candy pink with sprinkles. */
+.jar.jar-gumball,
+.jar-mini.jar-gumball {
+  background:
+    radial-gradient(4px 4px at 16% 14%, #ffd45e 50%, transparent 51%), radial-gradient(4px 4px at 82% 22%, #7cc8ff 50%, transparent 51%),
+    radial-gradient(4px 4px at 30% 62%, #a8f0dc 50%, transparent 51%), radial-gradient(4px 4px at 74% 74%, #c9b6ff 50%, transparent 51%),
+    radial-gradient(4px 4px at 52% 40%, #fff 50%, transparent 51%),
+    linear-gradient(180deg, rgba(255, 214, 232, 0.6), rgba(255, 176, 208, 0.62));
+}
+/* Windy jar: fresh mint air. */
+.jar.jar-windy,
+.jar-mini.jar-windy {
+  background: linear-gradient(180deg, rgba(214, 250, 236, 0.6), rgba(160, 232, 206, 0.62));
+}
+/* Hourglass jar: warm sand. */
+.jar.jar-hourglass,
+.jar-mini.jar-hourglass {
+  background: linear-gradient(180deg, rgba(255, 240, 204, 0.6), rgba(255, 214, 140, 0.65));
+}
 /* At night the jars glow instead of going muddy: deep amber honey, a darker sky with a nebula, deep sea water. */
 :root[data-theme='dark'] .jar.jar-honey,
 :root[data-theme='dark'] .jar-mini.jar-honey {
@@ -1130,6 +1183,36 @@ h2 {
 :root[data-theme='dark'] .jar.jar-bowl,
 :root[data-theme='dark'] .jar-mini.jar-bowl {
   background: linear-gradient(180deg, rgba(28, 96, 128, 0.5), rgba(14, 122, 150, 0.62));
+}
+:root[data-theme='dark'] .jar.jar-balloon,
+:root[data-theme='dark'] .jar-mini.jar-balloon {
+  background:
+    radial-gradient(1.5px 1.5px at 20% 30%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 66% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 84% 44%, #fff 50%, transparent 51%),
+    radial-gradient(22% 9% at 24% 70%, rgba(150, 170, 230, 0.35) 60%, transparent 62%), radial-gradient(18% 8% at 78% 52%, rgba(150, 170, 230, 0.3) 60%, transparent 62%),
+    linear-gradient(180deg, #0f1a48, #27357a);
+}
+:root[data-theme='dark'] .jar.jar-ship,
+:root[data-theme='dark'] .jar-mini.jar-ship {
+  background:
+    radial-gradient(14% 5% at 12% 100%, rgba(190, 230, 255, 0.5) 60%, transparent 62%), radial-gradient(14% 5% at 38% 100%, rgba(190, 230, 255, 0.5) 60%, transparent 62%),
+    radial-gradient(14% 5% at 64% 100%, rgba(190, 230, 255, 0.5) 60%, transparent 62%), radial-gradient(14% 5% at 90% 100%, rgba(190, 230, 255, 0.5) 60%, transparent 62%),
+    linear-gradient(180deg, rgba(18, 34, 74, 0.7) 0 78%, rgba(14, 84, 122, 0.75) 100%);
+}
+:root[data-theme='dark'] .jar.jar-gumball,
+:root[data-theme='dark'] .jar-mini.jar-gumball {
+  background:
+    radial-gradient(4px 4px at 16% 14%, #ffd45e 50%, transparent 51%), radial-gradient(4px 4px at 82% 22%, #7cc8ff 50%, transparent 51%),
+    radial-gradient(4px 4px at 30% 62%, #a8f0dc 50%, transparent 51%), radial-gradient(4px 4px at 74% 74%, #c9b6ff 50%, transparent 51%),
+    linear-gradient(180deg, rgba(110, 30, 78, 0.6), rgba(150, 44, 100, 0.62));
+}
+:root[data-theme='dark'] .jar.jar-windy,
+:root[data-theme='dark'] .jar-mini.jar-windy {
+  background: linear-gradient(180deg, rgba(14, 70, 62, 0.6), rgba(22, 104, 88, 0.62));
+}
+:root[data-theme='dark'] .jar.jar-hourglass,
+:root[data-theme='dark'] .jar-mini.jar-hourglass {
+  background: linear-gradient(180deg, rgba(92, 60, 14, 0.55), rgba(150, 100, 26, 0.6));
 }
 /* The fish bowl's round bottom: half a circle as wide as the jar (the jar is 2 wide by 3 tall). */
 .jar.jar-bowl,

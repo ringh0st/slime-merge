@@ -31,6 +31,16 @@ const HELPER_COST = 350;
 const HELPER_CAP = 3;
 const KIND_OF = { [ROCK_TIER]: 'rock', [RAINBOW_TIER]: 'rainbow', [BOMB_TIER]: 'bomb' };
 const ICE = '#BFE9FF';
+// The gumball jar's pegs and the hourglass jar's waist (in the tall jar's own measures).
+const PEGS = [
+  [105, 200],
+  [295, 200],
+  [200, 285],
+];
+const PEG_R = 9;
+const WAIST = { y: 300, r: 120, reach: 78 };
+// The windy jar: a gust every few seconds, announced a moment before it blows.
+const WIND = { every: 6500, warn: 1500, blow: 1900, pull: 0.5 };
 
 export class Game {
   constructor(canvas, cb = {}) {
@@ -45,6 +55,7 @@ export class Game {
     this.rScale = 1;
     this.dangerY = DANGER_Y;
     this.dropY = DROP_Y;
+    this.tilt = 0;
     this.fierce = false;
     this.gentle = false;
     this.hat = null;
@@ -88,11 +99,19 @@ export class Game {
     if (this.walls) Composite.remove(this.world, this.walls);
     const T = 100;
     const opts = { isStatic: true, friction: 0.5, restitution: 0.1 };
+    // The side the pieces settle on is closed, the other one is open: the floor, or the lid of an upside-down jar.
+    const up = this.isUpsideDown;
+    const sideY = up ? this.h / 2 + H : this.h / 2 - H;
     this.walls = [
-      Bodies.rectangle(W / 2, this.h + T / 2, W + T * 2, T, opts),
-      Bodies.rectangle(-T / 2, this.h / 2 - H, T, H * 3, opts),
-      Bodies.rectangle(W + T / 2, this.h / 2 - H, T, H * 3, opts),
+      Bodies.rectangle(W / 2, up ? -T / 2 : this.h + T / 2, W + T * 2, T, opts),
+      Bodies.rectangle(-T / 2, sideY, T, H * 3, opts),
+      Bodies.rectangle(W + T / 2, sideY, T, H * 3, opts),
     ];
+    if (this.jar.hasPegs) for (const [x, y] of PEGS) this.walls.push(Bodies.circle(x, y, PEG_R, { isStatic: true, friction: 0.05, restitution: 0.9 }));
+    if (this.jar.hasWaist) {
+      // Two round bulges in the side walls leave a narrow middle.
+      for (const x of [WAIST.reach - WAIST.r, W - WAIST.reach + WAIST.r]) this.walls.push(Bodies.circle(x, WAIST.y, WAIST.r, { isStatic: true, friction: 0.2, restitution: 0.1 }));
+    }
     if (this.jar.isRound) {
       // A round bottom: short flat pieces along a half circle as wide as the jar.
       const R = W / 2;
@@ -110,8 +129,37 @@ export class Game {
   /** Switch to another jar (only between games): its gravity, feel and shape. */
   setJar(jar) {
     this.jar = jar;
-    this.engine.gravity.y = jar.gravity;
+    this.layout();
     this.buildWalls();
+  }
+
+  /** An upside-down jar: pieces float up, are let go at the bottom and pile under the lid. */
+  get isUpsideDown() {
+    return Boolean(this.jar.isUpsideDown);
+  }
+
+  /** Which way pieces fall (1 down, -1 up). */
+  get fall() {
+    return this.isUpsideDown ? -1 : 1;
+  }
+
+  /** Where the danger line and the waiting slime sit, and which way the jar pulls. */
+  layout() {
+    const line = Math.round(DANGER_Y * this.rScale);
+    const wait = Math.round(DROP_Y * this.rScale);
+    this.dangerY = this.isUpsideDown ? this.h - line : line;
+    this.dropY = this.isUpsideDown ? this.h - wait : wait;
+    this.engine.gravity.x = 0;
+    this.engine.gravity.y = this.jar.gravity * this.fall;
+    this.setTilt(0);
+    this.wind = { nextAt: this.simTime + WIND.every, dir: 1, power: 0, warning: 0 };
+  }
+
+  /** The ship jar leans (radians, clockwise); the game's page leans the jar on screen to match. */
+  setTilt(angle) {
+    if (angle === this.tilt) return;
+    this.tilt = angle;
+    this.cb.onTilt?.(angle);
   }
 
   /**
@@ -121,9 +169,8 @@ export class Game {
   setShape({ height = H, scale = 1 } = {}) {
     this.h = height;
     this.rScale = scale;
-    this.dangerY = Math.round(DANGER_Y * scale);
-    this.dropY = Math.round(DROP_Y * scale);
     this.fierce = scale < 1;
+    this.layout();
     this.buildWalls();
   }
 
@@ -211,6 +258,7 @@ export class Game {
     this.helpers = { shake: 1, pop: 1 };
     this.charge = 0;
     this.nextBubble = 2500;
+    this.wind = { nextAt: this.simTime + WIND.every, dir: 1, power: 0, warning: 0 };
     // Counted for the goals (goals.js).
     this.run = { kings: 0, rocks: 0, maxCombo: 0, rainbows: 0 };
     if (mode === 'play') {
@@ -304,7 +352,7 @@ export class Game {
     if (this.mode !== 'play' || this.over || this.paused || this.helpers.shake < 1) return false;
     this.helpers.shake--;
     for (const b of this.bodies()) {
-      Body.setVelocity(b, { x: b.velocity.x + (Math.random() - 0.5) * 14, y: b.velocity.y - 5 - Math.random() * 5 });
+      Body.setVelocity(b, { x: b.velocity.x + (Math.random() - 0.5) * 14, y: b.velocity.y - (5 + Math.random() * 5) * this.fall });
       b.plugin.jv += 2;
     }
     sfx.shake();
@@ -398,7 +446,7 @@ export class Game {
 
   drop() {
     if (this.mode !== 'play' || !this.canDrop || this.over || this.paused) return false;
-    const b = this.spawn(this.current.tier, this.clampAim(), this.dropY, { x: 0, y: 1 }, Boolean(this.current.frozen));
+    const b = this.spawn(this.current.tier, this.clampAim(), this.dropY, { x: 0, y: this.fall }, Boolean(this.current.frozen));
     b.plugin.jv = -1.4; // stretch as it falls
     this.drops++;
     this.canDrop = false;
@@ -474,7 +522,8 @@ export class Game {
         if (play) sfx.king();
       } else {
         const nt = t + 1;
-        const nb = this.spawn(nt, x, y, { x: vx * 0.5, y: Math.min(vy, 0) - 1.5 });
+        // The new slime hops a little, away from the pile.
+        const nb = this.spawn(nt, x, y, { x: vx * 0.5, y: (Math.min(vy * this.fall, 0) - 1.5) * this.fall });
         nb.plugin.j = -0.2;
         this.burst(x, y, color, 10 + t * 2, this.radius(t));
         this.ring(x, y, this.radius(nt), TIERS[nt].color);
@@ -639,6 +688,14 @@ export class Game {
     }
     if (!this.canDrop && this.simTime >= this.dropReadyAt) this.canDrop = true;
     for (const b of list) if (b.plugin.kind === 'bomb' && b.plugin.fuseAt && this.simTime >= b.plugin.fuseAt) this.explode(b);
+    if (this.jar.rocking) {
+      // The ship jar rocks like a boat: the pull leans with it, so the pile slides.
+      const angle = ((this.jar.rocking.degrees * Math.PI) / 180) * Math.sin((this.simTime / (this.jar.rocking.seconds * 1000)) * Math.PI * 2);
+      this.engine.gravity.x = Math.sin(angle) * this.jar.gravity;
+      this.engine.gravity.y = Math.cos(angle) * this.jar.gravity;
+      this.setTilt(angle);
+    }
+    if (this.jar.hasWind && this.mode === 'play') this.blow(list, dt);
     if (this.jar.hasBubbles && this.mode === 'play') {
       // The fish bowl: now and then a bubble lifts one of the small slimes.
       this.nextBubble -= dt;
@@ -658,7 +715,8 @@ export class Game {
       let high = false;
       for (const b of list) {
         const p = b.plugin;
-        if (this.simTime - p.born > 1500 && !p.merging && b.position.y - p.r < this.dangerY) high = true;
+        const edge = b.position.y - p.r * this.fall;
+        if (this.simTime - p.born > 1500 && !p.merging && (this.isUpsideDown ? edge > this.dangerY : edge < this.dangerY)) high = true;
       }
       this.danger = high ? this.danger + dt : Math.max(0, this.danger - dt * 1.5);
       const lvl = Math.min(1, this.danger / OVER_MS);
@@ -673,9 +731,34 @@ export class Game {
       if (this.nextDemo <= 0 && list.length < 16) {
         this.nextDemo = 700;
         const t = Math.floor(Math.random() * 4);
-        this.spawn(t, 80 + Math.random() * (W - 160), -40);
+        this.spawn(t, 80 + Math.random() * (W - 160), this.isUpsideDown ? this.h + 40 : -40);
       }
     }
+  }
+
+  /** The windy jar: an arrow shows where the next gust will come from, then it pushes everything, small pieces most. */
+  blow(list, dt) {
+    const w = this.wind;
+    const since = this.simTime - w.nextAt;
+    if (since < -WIND.warn) {
+      w.power = 0;
+      w.warning = 0;
+    } else if (since < 0) {
+      if (!w.warning) w.dir = Math.random() < 0.5 ? -1 : 1;
+      w.warning = 1 + since / WIND.warn;
+      w.power = 0;
+    } else if (since < WIND.blow) {
+      if (w.warning) sfx.shake();
+      w.warning = 0;
+      w.power = Math.sin((since / WIND.blow) * Math.PI);
+      for (const b of list) {
+        if (b.plugin.r < 40) Body.setVelocity(b, { x: b.velocity.x + w.dir * w.power * 0.05 * (dt / 16.67), y: b.velocity.y });
+      }
+    } else {
+      w.power = 0;
+      w.nextAt = this.simTime + WIND.every;
+    }
+    this.engine.gravity.x = w.dir * w.power * WIND.pull;
   }
 
   tickFx(dt) {
@@ -694,6 +777,86 @@ export class Game {
       t.life -= 0.016 * f;
     }
     this.texts = this.texts.filter((t) => t.life > 0);
+  }
+
+  /** A balloon's string: it hangs under the slime and sways. */
+  drawString(ctx, b, now) {
+    const { x, y } = b.position;
+    const r = b.plugin.r;
+    const sway = Math.sin(now * 0.003 + b.plugin.seed) * 4 - b.velocity.x * 2;
+    ctx.strokeStyle = 'rgba(120, 100, 170, 0.6)';
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y + r - 1);
+    ctx.quadraticCurveTo(x + sway, y + r + 10, x - sway * 0.6, y + r + 14 + r * 0.35);
+    ctx.stroke();
+  }
+
+  /** What stands in a jar: the gumball jar's pegs, the hourglass jar's waist, the windy jar's gusts. */
+  drawFittings(ctx, now) {
+    if (this.jar.hasPegs) {
+      for (const [x, y] of PEGS) {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#ff7aa8';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, PEG_R - 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    if (this.jar.hasWaist) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, this.h);
+      ctx.clip();
+      for (const x of [WAIST.reach - WAIST.r, W - WAIST.reach + WAIST.r]) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.strokeStyle = 'rgba(224, 178, 60, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, WAIST.y, WAIST.r - 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if (this.jar.hasWind && this.mode === 'play') {
+      const { dir, power, warning } = this.wind;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      if (warning > 0) {
+        // Three arrows at the side the gust comes from, blinking faster as it gets close.
+        const blink = 0.45 + 0.55 * Math.abs(Math.sin(now * (0.006 + warning * 0.01)));
+        ctx.strokeStyle = `rgba(70, 150, 125, ${blink})`;
+        ctx.lineWidth = 5;
+        for (let i = 0; i < 3; i++) {
+          const x = (dir > 0 ? 22 : W - 22) + dir * i * 16;
+          const y = this.h * 0.42;
+          ctx.beginPath();
+          ctx.moveTo(x - dir * 7, y - 12);
+          ctx.lineTo(x + dir * 5, y);
+          ctx.lineTo(x - dir * 7, y + 12);
+          ctx.stroke();
+        }
+      }
+      if (power > 0) {
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * power})`;
+        ctx.lineWidth = 4;
+        for (let i = 0; i < 7; i++) {
+          const y = 130 + i * ((this.h - 190) / 6) + Math.sin(i * 2.3) * 14;
+          const travel = (((now * 0.45 + i * 131) % (W + 160)) + W + 160) % (W + 160);
+          const x = dir > 0 ? travel - 80 : W + 80 - travel;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.bezierCurveTo(x + dir * 22, y - 6, x + dir * 44, y + 6, x + dir * 68, y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
   }
 
   render(now) {
@@ -727,25 +890,30 @@ export class Game {
     if (play && !this.over) {
       const x = this.clampAim();
       const r = this.heldR;
-      const g = ctx.createLinearGradient(0, this.dropY, 0, this.h);
+      const up = this.isUpsideDown;
+      const g = ctx.createLinearGradient(0, this.dropY, 0, up ? 0 : this.h);
       g.addColorStop(0, 'rgba(255,255,255,0.55)');
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(x - 1, this.dropY + r, 2, this.h);
+      if (up) ctx.fillRect(x - 1, 0, 2, this.dropY - r);
+      else ctx.fillRect(x - 1, this.dropY + r, 2, this.h);
       drawSlime(ctx, x, this.dropY + Math.sin(now * 0.004) * 2, r, this.current.tier, {
         t: now,
         alpha: this.canDrop ? 1 : 0.35,
         px: k,
-        lookY: 1,
+        lookY: this.fall,
         frozen: this.current.frozen,
         hat: this.hat,
         fierce: this.fierce,
       });
     }
 
+    this.drawFittings(ctx, now);
+
     for (const b of this.bodies()) {
       const p = b.plugin;
       let blink = false;
+      if (this.isUpsideDown) this.drawString(ctx, b, now);
       if (now > p.blinkAt) {
         if (now > p.blinkAt + 140) p.blinkAt = now + 2000 + Math.random() * 5000;
         else blink = true;
@@ -755,9 +923,9 @@ export class Game {
         t: now,
         seed: p.seed,
         lookX: Math.max(-1, Math.min(1, (this.aimX - b.position.x) / 150)),
-        lookY: -0.3,
+        lookY: -0.3 * this.fall,
         blink: blink && !p.dead,
-        worried: p.dead || (lvl > 0.15 && b.position.y < this.dangerY + 140 * this.rScale),
+        worried: p.dead || (lvl > 0.15 && (this.dangerY - b.position.y) * this.fall > -140 * this.rScale),
         px: k,
         frozen: p.frozen,
         hat: this.hat,
