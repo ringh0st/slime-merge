@@ -103,8 +103,17 @@ export const JARS = [
     friction: 0.3,
     hasWaist: true,
   },
+  // Two slimes of the same kind that are close pull toward each other.
+  { id: 'magnet', name: 'Magnet jar', blurb: 'Twins pull together', unlockAt: 50000, gravity: 1.0, air: 0.014, bounce: 0.1, friction: 0.25, hasMagnet: true },
+  // A wall down the middle makes two rooms; slimes only meet over the top of it.
+  { id: 'twin', name: 'Twin jar', blurb: 'A wall down the middle', unlockAt: 62000, gravity: 1.05, air: 0.012, bounce: 0.1, friction: 0.3, hasDivider: true },
+  // The side walls slowly come in and go back out.
+  { id: 'squeeze', name: 'Squeeze jar', blurb: 'The walls breathe in and out', unlockAt: 75000, gravity: 1.05, air: 0.012, bounce: 0.1, friction: 0.3, squeezing: true },
 ];
 
 export const jarById = (id) => JARS.find((jar) => jar.id === id) ?? JARS[0];
 
-export const isJarOpen = (jar, lifetimePoints) => lifetimePoints >= jar.unlockAt;
+// "?alljars" on the game's address opens every jar for that visit (the owner's way to try jars not yet earned).
+const ALL_OPEN = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('alljars');
+
+export const isJarOpen = (jar, lifetimePoints) => ALL_OPEN || lifetimePoints >= jar.unlockAt;

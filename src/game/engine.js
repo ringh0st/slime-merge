@@ -40,6 +40,11 @@ const PEGS = [
 const PEG_R = 9;
 const WAIST = { y: 300, r: 120, reach: 78 };
 // The windy jar: a gust every few seconds, announced a moment before it blows.
+// The twin jar's wall down the middle, the squeeze jar's breathing walls, the magnet jar's pull between twins.
+const DIVIDER = { height: 240, thick: 14 };
+const SQUEEZE = { reach: 34, seconds: 9 };
+const MAGNET = { reach: 130, pull: 0.05 };
+const WALL_T = 100;
 const WIND = { every: 6500, warn: 1500, blow: 1900, pull: 0.5 };
 
 export class Game {
@@ -56,6 +61,9 @@ export class Game {
     this.dangerY = DANGER_Y;
     this.dropY = DROP_Y;
     this.tilt = 0;
+    // How far the squeeze jar's walls stand in right now, and which twins the magnet jar is pulling together.
+    this.inset = 0;
+    this.pulls = [];
     this.fierce = false;
     this.gentle = false;
     this.hat = null;
@@ -97,7 +105,7 @@ export class Game {
 
   buildWalls() {
     if (this.walls) Composite.remove(this.world, this.walls);
-    const T = 100;
+    const T = WALL_T;
     const opts = { isStatic: true, friction: 0.5, restitution: 0.1 };
     // The side the pieces settle on is closed, the other one is open: the floor, or the lid of an upside-down jar.
     const up = this.isUpsideDown;
@@ -107,6 +115,14 @@ export class Game {
       Bodies.rectangle(-T / 2, sideY, T, H * 3, opts),
       Bodies.rectangle(W + T / 2, sideY, T, H * 3, opts),
     ];
+    this.sideWalls = [this.walls[1], this.walls[2]];
+    this.inset = 0;
+    if (this.jar.hasDivider) {
+      // A wall with a round top, so nothing balances on a sharp corner.
+      const top = this.h - DIVIDER.height;
+      this.walls.push(Bodies.rectangle(W / 2, this.h - DIVIDER.height / 2 + DIVIDER.thick / 4, DIVIDER.thick, DIVIDER.height - DIVIDER.thick / 2, opts));
+      this.walls.push(Bodies.circle(W / 2, top + DIVIDER.thick / 2, DIVIDER.thick / 2, opts));
+    }
     if (this.jar.hasPegs) for (const [x, y] of PEGS) this.walls.push(Bodies.circle(x, y, PEG_R, { isStatic: true, friction: 0.05, restitution: 0.9 }));
     if (this.jar.hasWaist) {
       // Two round bulges in the side walls leave a narrow middle.
@@ -414,7 +430,7 @@ export class Game {
 
   clampAim() {
     const r = this.heldR;
-    return Math.min(W - r - 2, Math.max(r + 2, this.aimX));
+    return Math.min(W - this.inset - r - 2, Math.max(this.inset + r + 2, this.aimX));
   }
 
   spawn(tier, x, y, vel, frozen = false) {
@@ -696,6 +712,15 @@ export class Game {
       this.setTilt(angle);
     }
     if (this.jar.hasWind && this.mode === 'play') this.blow(list, dt);
+    if (this.jar.squeezing) {
+      // The squeeze jar breathes: both walls come in and go back out, slowly.
+      const inset = SQUEEZE.reach * (0.5 - 0.5 * Math.cos((this.simTime / (SQUEEZE.seconds * 1000)) * Math.PI * 2));
+      const [left, right] = this.sideWalls;
+      Body.setPosition(left, { x: -WALL_T / 2 + inset, y: left.position.y }, true);
+      Body.setPosition(right, { x: W + WALL_T / 2 - inset, y: right.position.y }, true);
+      this.inset = inset;
+    }
+    if (this.jar.hasMagnet) this.pullTwins(list, dt);
     if (this.jar.hasBubbles && this.mode === 'play') {
       // The fish bowl: now and then a bubble lifts one of the small slimes.
       this.nextBubble -= dt;
@@ -761,6 +786,30 @@ export class Game {
     this.engine.gravity.x = w.dir * w.power * WIND.pull;
   }
 
+  /** The magnet jar: two slimes of the same kind that are close pull toward each other. */
+  pullTwins(list, dt) {
+    this.pulls = [];
+    const f = dt / 16.67;
+    const reach = MAGNET.reach * this.rScale;
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      if (a.plugin.kind !== 'slime' || a.plugin.frozen || a.plugin.merging) continue;
+      for (let j = i + 1; j < list.length; j++) {
+        const b = list[j];
+        if (b.plugin.kind !== 'slime' || b.plugin.tier !== a.plugin.tier || b.plugin.frozen || b.plugin.merging) continue;
+        const dx = b.position.x - a.position.x;
+        const dy = b.position.y - a.position.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const gap = d - a.plugin.r - b.plugin.r;
+        if (gap > reach) continue;
+        const pull = MAGNET.pull * (1 - Math.max(0, gap) / reach) * f;
+        Body.setVelocity(a, { x: a.velocity.x + (dx / d) * pull, y: a.velocity.y + (dy / d) * pull });
+        Body.setVelocity(b, { x: b.velocity.x - (dx / d) * pull, y: b.velocity.y - (dy / d) * pull });
+        this.pulls.push([a, b, 1 - Math.max(0, gap) / reach]);
+      }
+    }
+  }
+
   tickFx(dt) {
     const f = dt / 16.67;
     for (const p of this.particles) {
@@ -795,6 +844,42 @@ export class Game {
 
   /** What stands in a jar: the gumball jar's pegs, the hourglass jar's waist, the windy jar's gusts. */
   drawFittings(ctx, now) {
+    if (this.jar.hasDivider) {
+      const top = this.h - DIVIDER.height;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.strokeStyle = 'rgba(139, 92, 246, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(W / 2 - DIVIDER.thick / 2 + 1, top + 1, DIVIDER.thick - 2, DIVIDER.height + 20, DIVIDER.thick / 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    if (this.jar.squeezing && this.inset > 0.5) {
+      // The walls standing in: frosted glass with a bright inner edge.
+      for (const side of [0, 1]) {
+        const x = side ? W - this.inset : 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillRect(x, 0, this.inset, this.h);
+        ctx.fillStyle = 'rgba(244, 114, 182, 0.75)';
+        ctx.fillRect(side ? x : this.inset - 3, 0, 3, this.h);
+      }
+    }
+    if (this.jar.hasMagnet) {
+      // A dotted thread of light between twins that are being pulled together.
+      ctx.save();
+      ctx.setLineDash([3, 6]);
+      ctx.lineCap = 'round';
+      ctx.lineDashOffset = -now * 0.03;
+      for (const [a, b, power] of this.pulls) {
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.25 + 0.6 * power})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(a.position.x, a.position.y);
+        ctx.lineTo(b.position.x, b.position.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     if (this.jar.hasPegs) {
       for (const [x, y] of PEGS) {
         ctx.fillStyle = '#ffffff';

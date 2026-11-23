@@ -1164,6 +1164,23 @@ h2 {
 .jar-mini.jar-hourglass {
   background: linear-gradient(180deg, rgba(255, 240, 204, 0.6), rgba(255, 214, 140, 0.65));
 }
+/* Magnet jar: a cool silver-blue with a hint of red and blue, like a horseshoe magnet. */
+.jar.jar-magnet,
+.jar-mini.jar-magnet {
+  background:
+    radial-gradient(60% 30% at 0% 100%, rgba(255, 120, 130, 0.4), transparent 70%), radial-gradient(60% 30% at 100% 100%, rgba(110, 160, 255, 0.45), transparent 70%),
+    linear-gradient(180deg, rgba(226, 232, 246, 0.6), rgba(196, 206, 232, 0.62));
+}
+/* Twin jar: two soft halves. */
+.jar.jar-twin,
+.jar-mini.jar-twin {
+  background: linear-gradient(90deg, rgba(255, 214, 232, 0.6) 0 50%, rgba(206, 226, 255, 0.6) 50% 100%);
+}
+/* Squeeze jar: warm coral. */
+.jar.jar-squeeze,
+.jar-mini.jar-squeeze {
+  background: linear-gradient(180deg, rgba(255, 226, 214, 0.6), rgba(255, 186, 170, 0.62));
+}
 /* At night the jars glow instead of going muddy: deep amber honey, a darker sky with a nebula, deep sea water. */
 :root[data-theme='dark'] .jar.jar-honey,
 :root[data-theme='dark'] .jar-mini.jar-honey {
@@ -1213,6 +1230,20 @@ h2 {
 :root[data-theme='dark'] .jar.jar-hourglass,
 :root[data-theme='dark'] .jar-mini.jar-hourglass {
   background: linear-gradient(180deg, rgba(92, 60, 14, 0.55), rgba(150, 100, 26, 0.6));
+}
+:root[data-theme='dark'] .jar.jar-magnet,
+:root[data-theme='dark'] .jar-mini.jar-magnet {
+  background:
+    radial-gradient(60% 30% at 0% 100%, rgba(200, 60, 80, 0.45), transparent 70%), radial-gradient(60% 30% at 100% 100%, rgba(50, 100, 220, 0.5), transparent 70%),
+    linear-gradient(180deg, rgba(40, 46, 70, 0.7), rgba(58, 66, 98, 0.7));
+}
+:root[data-theme='dark'] .jar.jar-twin,
+:root[data-theme='dark'] .jar-mini.jar-twin {
+  background: linear-gradient(90deg, rgba(104, 36, 78, 0.6) 0 50%, rgba(30, 58, 118, 0.6) 50% 100%);
+}
+:root[data-theme='dark'] .jar.jar-squeeze,
+:root[data-theme='dark'] .jar-mini.jar-squeeze {
+  background: linear-gradient(180deg, rgba(110, 44, 36, 0.6), rgba(160, 66, 52, 0.62));
 }
 /* The fish bowl's round bottom: half a circle as wide as the jar (the jar is 2 wide by 3 tall). */
 .jar.jar-bowl,

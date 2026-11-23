@@ -87,7 +87,7 @@ The moon/sun button at the top switches between night and light (`src/theme.js`,
 
 ## Jars
 
-Nine jars (`src/game/jars.js`), each opened by total points and each with its own feel, day look and night look (`.jar-<id>` in styles.css):
+Twelve jars (`src/game/jars.js`), each opened by total points and each with its own feel, day look and night look (`.jar-<id>` in styles.css):
 
 - Classic, Honey, Space, Fish bowl: different pull, stickiness and bounce; the bowl is round and bubbles lift small slimes.
 - **Balloon** (`isUpsideDown`): pieces are let go at the bottom, float up on strings and pile under the lid; the danger line is near the bottom ("Too low!").
@@ -95,6 +95,12 @@ Nine jars (`src/game/jars.js`), each opened by total points and each with its ow
 - **Gumball** (`hasPegs`): three bouncy pegs. Their gaps are wider than the biggest piece that can be dropped, so nothing gets stuck on them.
 - **Windy** (`hasWind`): a gust every few seconds, shown by arrows at the side a moment before, pushes everything and small pieces most.
 - **Hourglass** (`hasWaist`): two bulges leave a narrow middle (wide enough for a King).
+
+- **Magnet** (`hasMagnet`): two slimes of the same kind that are close pull toward each other (a dotted thread of light shows it).
+- **Twin** (`hasDivider`): a wall down the middle makes two rooms; slimes only meet over its top.
+- **Squeeze** (`squeezing`): the side walls slowly come in and go back out.
+
+`?alljars` on the game's address opens every jar for that visit, to try jars that aren't earned yet.
 
 The daily jar and fights always use Classic.
 
