@@ -4,7 +4,7 @@ import RecordList from './RecordList.jsx';
 import { loadRecords } from '../records.js';
 import { isInstalled } from '../install.js';
 import { TIERS } from '../game/tiers.js';
-import { JARS, isJarOpen } from '../game/jars.js';
+import { JARS, isJarOpen, jarById } from '../game/jars.js';
 import { unlockedHats } from '../game/goals.js';
 import { HAT_IDS } from '../game/goals.js';
 import { dailyStreak, dayKey, weekOf } from '../daily.js';
@@ -56,13 +56,14 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
         </button>
       )}
 
-      {/* A game that was left open comes first: continue it, or start over. */}
-      {savedRun ? (
+      {/* A game that was left open comes first: continue it, or start over. But a jar picked after it was left
+          means the player wants that jar, so then Play comes first and the old game is the small button. */}
+      {savedRun && (savedRun.day || savedRun.jarId === jar.id) ? (
         <>
           <button className="btn play-big" onClick={onContinue}>
             Continue
             <small>
-              {savedRun.day ? 'Daily jar' : 'Your game'} · {savedRun.score.toLocaleString()} points
+              {savedRun.day ? 'Daily jar' : jarById(savedRun.jarId).name} · {savedRun.score.toLocaleString()} points
             </small>
           </button>
           <button className="chip-btn" onClick={onPlay}>
@@ -70,13 +71,20 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
           </button>
         </>
       ) : (
-        <button className="btn play-big" onClick={onPlay}>
-          Play
-          <small>
-            {jar.name}
-            {best > 0 ? ` · Best ${best.toLocaleString()}` : ''}
-          </small>
-        </button>
+        <>
+          <button className="btn play-big" onClick={onPlay}>
+            Play
+            <small>
+              {jar.name}
+              {best > 0 ? ` · Best ${best.toLocaleString()}` : ''}
+            </small>
+          </button>
+          {savedRun && (
+            <button className="chip-btn" onClick={onContinue}>
+              Continue your {jarById(savedRun.jarId).name} game · {savedRun.score.toLocaleString()}
+            </button>
+          )}
+        </>
       )}
 
       {target && (
