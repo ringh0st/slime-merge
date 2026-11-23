@@ -19,6 +19,7 @@ import { useFight } from './useFight.js';
 import { EMOTES, rocksForCombo } from './fight.js';
 import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
+import Splash from './components/Splash.jsx';
 import { haptic } from './native.js';
 import { store } from './storage.js';
 import { countGame, countVisit, loadRecords, saveScore } from './records.js';
@@ -163,6 +164,8 @@ export default function App() {
   const [danger, setDanger] = useState(0);
   const [discovered, setDiscovered] = useState(() => store.get('slime.discovered', 4));
   // Sound effects and music have their own switches (the old single mute turned both off).
+  // The opening screen, once per start of the app (not on the owner's numbers page).
+  const [isSplashUp, setIsSplashUp] = useState(() => !new URLSearchParams(window.location.search).has('stats'));
   const [sfxOn, setSfxOn] = useState(() => store.get('slime.sfx', !store.get('slime.muted', false)));
   const [musicOn, setMusicOn] = useState(() => store.get('slime.music', !store.get('slime.muted', false)));
   const [isSoundOpen, setIsSoundOpen] = useState(false);
@@ -688,6 +691,7 @@ export default function App() {
 
   return (
     <div className={`app ${PAGES.includes(phase) ? 'is-page' : ''}`}>
+      {isSplashUp && <Splash onDone={() => setIsSplashUp(false)} />}
       <div className="backdrop" aria-hidden="true">
         <span className="orb o1" />
         <span className="orb o2" />

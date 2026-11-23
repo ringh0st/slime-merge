@@ -1,8 +1,14 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { readFileSync } from "node:fs";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+const { version } = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf8")
+);
 
 // Relative base so the build works on GitHub Pages under /<repo>/.
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: "./",
+  define: { __APP_VERSION__: JSON.stringify(version) },
 });

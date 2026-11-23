@@ -1418,9 +1418,14 @@ h2 {
 .home .hero-slimes {
   margin: 4px 0 -4px;
 }
+.home .hero-slimes {
+  flex: none;
+}
 .home .hero-slimes .slime-icon {
-  width: auto;
-  height: auto;
+  flex: none;
+}
+.home > * {
+  flex-shrink: 0;
 }
 .home h1 {
   font-size: clamp(40px, 12vw, 56px);
@@ -2311,5 +2316,225 @@ button.chip {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .record-row.top .who {
     color: inherit;
+  }
+}
+
+/* The opening screen: slimes merge in a little jar while the game loads underneath. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: calc(24px + var(--sat)) 24px calc(24px + var(--sab));
+  background:
+    radial-gradient(60% 40% at 15% 12%, var(--orb-1), transparent 70%),
+    radial-gradient(55% 40% at 90% 88%, var(--orb-2), transparent 70%),
+    radial-gradient(40% 30% at 92% 40%, var(--orb-3), transparent 70%),
+    linear-gradient(160deg, var(--bg), var(--bg-2));
+  text-align: center;
+  outline: none;
+  cursor: pointer;
+  transition: opacity 0.42s ease;
+}
+.splash.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-jar {
+  position: relative;
+  flex: none;
+  width: 170px;
+  height: 176px;
+  border-radius: 26px 26px 40px 40px;
+  background: var(--jar-tint);
+  box-shadow:
+    inset 0 0 0 2.5px var(--glass-border),
+    inset 0 -18px 30px var(--jar-back),
+    0 14px 30px var(--shadow);
+}
+.splash-jar > span {
+  position: absolute;
+  display: block;
+}
+.splash-drop {
+  bottom: 0;
+  animation: splash-fall 1.5s cubic-bezier(0.5, 0, 0.8, 0.6) both;
+}
+.splash-drop.a {
+  left: 16px;
+}
+.splash-drop.b {
+  right: 16px;
+  animation-delay: 0.22s;
+}
+.splash-big {
+  left: 29px;
+  bottom: -8px;
+  transform-origin: 50% 85%;
+  animation:
+    splash-merge 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) 1.5s both,
+    bob 2.2s ease-in-out 2.2s infinite;
+}
+.splash-ring {
+  left: 50%;
+  bottom: 28px;
+  width: 70px;
+  height: 70px;
+  margin-left: -35px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-2);
+  opacity: 0;
+  animation: splash-ring 0.7s ease-out 1.5s forwards;
+}
+@keyframes splash-fall {
+  0% {
+    transform: translateY(-230px);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  52% {
+    transform: translateY(0) scale(1.12, 0.86);
+  }
+  64% {
+    transform: translateY(-8px) scale(0.97, 1.04);
+  }
+  76%,
+  84% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+}
+@keyframes splash-merge {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes splash-ring {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+.splash-title {
+  margin-top: 18px;
+  font-size: clamp(44px, 13vw, 60px);
+  line-height: 1.05;
+  background: none;
+  color: var(--accent);
+}
+.splash-title span {
+  display: inline-block;
+  color: color-mix(in oklab, var(--accent) calc(100% - var(--i) * 9%), var(--accent-2));
+  animation: splash-letter 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  animation-delay: calc(0.5s + var(--i) * 0.05s);
+}
+@keyframes splash-letter {
+  0% {
+    transform: translateY(14px) scale(0.7);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+.splash-tag {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+.splash-loading {
+  width: min(240px, 70%);
+  margin-top: 26px;
+}
+.splash-bar {
+  height: 10px;
+  border-radius: 99px;
+  background: var(--glass-strong);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  overflow: hidden;
+}
+.splash-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transform-origin: 0 50%;
+  animation: splash-fill linear both;
+}
+[dir='rtl'] .splash-bar span {
+  transform-origin: 100% 50%;
+}
+@keyframes splash-fill {
+  0% {
+    transform: scaleX(0.03);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+.splash-loading p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  animation: splash-line 0.4s ease both;
+}
+@keyframes splash-line {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.splash-foot {
+  position: absolute;
+  inset: auto 0 calc(22px + var(--sab));
+  display: grid;
+  gap: 3px;
+  color: var(--ink);
+}
+.splash-foot p {
+  margin: 0;
+  font: 500 15px 'Fredoka', system-ui, sans-serif;
+}
+.splash-foot small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+@media (max-height: 560px) {
+  .splash-jar {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-drop {
+    display: none !important;
+  }
+  .splash-big,
+  .splash-title span,
+  .splash-ring,
+  .splash-loading p {
+    animation: none;
+  }
+  .splash-ring {
+    display: none !important;
   }
 }

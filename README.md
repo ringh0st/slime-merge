@@ -76,3 +76,7 @@ The look follows current UI trends: soft, toy-like 3D forms, frosted-glass panel
 ## Records
 
 After a game, players can save their score under a name and see the best of the week, the month and all time (`src/records.js`, `Records`, `SaveScore`). No accounts. The scores live in a Supabase table reached only through a few functions (world, club and daily boards); run `supabase/slime_records.sql` in the Supabase SQL Editor to set it up, and run it again whenever that file changes. Until it has been run again, the world records keep working and the club and daily boards say they aren't ready yet.
+
+## Opening screen and version
+
+`src/components/Splash.jsx` shows for a few seconds at every start: two slimes merge in a little jar, then the game's name, a loading bar, "A Ringhost's Games production" and the version. A tap, Enter or Escape skips it. The version comes from `package.json` (`src/appInfo.js`); bump it for each release.
