@@ -87,7 +87,7 @@ The moon/sun button at the top switches between night and light (`src/theme.js`,
 
 ## Jars
 
-Twelve jars (`src/game/jars.js`), each opened by total points and each with its own feel, day look and night look (`.jar-<id>` in styles.css):
+Fifteen jars (`src/game/jars.js`), each opened by total points and each with its own feel, day look and night look (`.jar-<id>` in styles.css):
 
 - Classic, Honey, Space, Fish bowl: different pull, stickiness and bounce; the bowl is round and bubbles lift small slimes.
 - **Balloon** (`isUpsideDown`): pieces are let go at the bottom, float up on strings and pile under the lid; the danger line is near the bottom ("Too low!").
@@ -99,6 +99,11 @@ Twelve jars (`src/game/jars.js`), each opened by total points and each with its 
 - **Magnet** (`hasMagnet`): two slimes of the same kind that are close pull toward each other (a dotted thread of light shows it).
 - **Twin** (`hasDivider`): a wall down the middle makes two rooms; slimes only meet over its top.
 - **Squeeze** (`squeezing`): the side walls slowly come in and go back out.
+
+- **Arcade jars** (`isPixel`): three jars in the style of 1980s arcade games (original takes, no characters or art from any real game). They are drawn on a small hidden canvas and copied up without smoothing, so every pixel is a block (`resize(…, pixelWidth)`), under faint screen stripes, and look the same by day and night.
+  - **Maze** (`hasDots`): a grid of glowing dots; every dot a slime touches is eaten for points (big corner dots are worth more) and comes back after a while.
+  - **Brick** (`hasBricks`): a row of bricks; two knocks (a landing, a merge beside it, a bomb) break one for points, and missing bricks return every 8 drops where there is room.
+  - **Paddle** (`hasPaddle`): a slippery bat slides from side to side and knocks landing pieces the way it is going.
 
 `?alljars` on the game's address opens every jar for that visit, to try jars that aren't earned yet.
 

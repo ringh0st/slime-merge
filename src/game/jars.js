@@ -109,6 +109,13 @@ export const JARS = [
   { id: 'twin', name: 'Twin jar', blurb: 'A wall down the middle', unlockAt: 62000, gravity: 1.05, air: 0.012, bounce: 0.1, friction: 0.3, hasDivider: true },
   // The side walls slowly come in and go back out.
   { id: 'squeeze', name: 'Squeeze jar', blurb: 'The walls breathe in and out', unlockAt: 75000, gravity: 1.05, air: 0.012, bounce: 0.1, friction: 0.3, squeezing: true },
+  // The arcade jars: drawn in big pixels, like games from the 1980s.
+  // Glowing dots fill the maze: every dot a slime touches is eaten for points, and they come back.
+  { id: 'maze', name: 'Maze jar', blurb: 'Eat the dots for points', unlockAt: 90000, gravity: 1.05, air: 0.012, bounce: 0.15, friction: 0.3, hasDots: true, isPixel: true },
+  // A row of bricks: two knocks break one, and the row comes back.
+  { id: 'brick', name: 'Brick jar', blurb: 'Smash the bricks', unlockAt: 105000, gravity: 1.05, air: 0.012, bounce: 0.2, friction: 0.3, hasBricks: true, isPixel: true },
+  // A bat slides from side to side and knocks pieces away.
+  { id: 'paddle', name: 'Paddle jar', blurb: 'A bat knocks them about', unlockAt: 120000, gravity: 1.05, air: 0.012, bounce: 0.3, friction: 0.3, hasPaddle: true, isPixel: true },
 ];
 
 export const jarById = (id) => JARS.find((jar) => jar.id === id) ?? JARS[0];

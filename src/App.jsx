@@ -43,6 +43,8 @@ function fitJar() {
   return { w: Math.round(W * s), h: Math.round(H * s) };
 }
 
+/** How many pixels wide an arcade jar is drawn (the jar itself is 400 wide). */
+const PIXEL_JAR_WIDTH = 140;
 /** How long slimes may stay over the line before the jar overflows (OVER_MS in the engine). */
 const OVERFLOW_SECONDS = 2.6;
 
@@ -502,7 +504,7 @@ export default function App() {
     // While developing: the running game, for trying special pieces from the browser console.
     if (import.meta.env.DEV) window.slimeGame = game;
     const s0 = fitJar();
-    game.resize(s0.w, s0.h, Math.min(window.devicePixelRatio || 1, 2.5));
+    game.resize(s0.w, s0.h, Math.min(window.devicePixelRatio || 1, 2.5), shownJar.isPixel ? PIXEL_JAR_WIDTH : 0);
     return () => game.destroy();
   }, []);
 
@@ -543,9 +545,9 @@ export default function App() {
   const jarW = isFighting ? duelW : size.w;
   const jarH = isFighting ? Math.round((duelW * FIGHT_SHAPE.height) / W) : size.h;
   useLayoutEffect(() => {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    gameRef.current?.resize(jarW, jarH, dpr);
-  }, [jarW, jarH]);
+    // An arcade jar is drawn with few, big pixels.
+    gameRef.current?.resize(jarW, jarH, Math.min(window.devicePixelRatio || 1, 2.5), shownJar.isPixel ? PIXEL_JAR_WIDTH : 0);
+  }, [jarW, jarH, shownJar]);
 
   useEffect(() => {
     const onResize = () => setSize(fitJar());
@@ -878,7 +880,7 @@ export default function App() {
         <div className={`tilt ${shownJar.rocking ? 'is-rocking' : ''}`} ref={tiltRef}>
           <div className={`jar-back jar-${shownJar.id}`} style={{ width: jarW, height: jarH }} />
           <div
-            className={`jar jar-${shownJar.id} ${danger > 0.1 ? 'is-danger' : ''} ${isPopping ? 'is-popping' : ''}`}
+            className={`jar jar-${shownJar.id} ${shownJar.isPixel ? 'is-pixel' : ''} ${danger > 0.1 ? 'is-danger' : ''} ${isPopping ? 'is-popping' : ''}`}
             style={{ width: jarW, height: jarH, '--danger': danger }}
           >
             <div className="jar-shake" ref={shakeRef}>

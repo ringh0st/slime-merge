@@ -45,6 +45,11 @@ const DIVIDER = { height: 240, thick: 14 };
 const SQUEEZE = { reach: 34, seconds: 9 };
 const MAGNET = { reach: 130, pull: 0.05 };
 const WALL_T = 100;
+// The arcade jars. Maze: glowing dots to eat (big ones are worth more). Bricks: a row to smash, which comes back.
+// Paddle: a bat that slides from side to side and knocks pieces away.
+const DOTS = { cols: 6, rows: 7, top: 170, r: 5, points: 5, bigPoints: 25, backAfter: 10000 };
+const BRICKS = { count: 6, y: 300, h: 22, gap: 4, points: 20, backEvery: 8, colors: ['#ff5d73', '#ff9f43', '#ffd93d', '#6bcb77', '#4d96ff', '#b983ff'] };
+const PADDLE = { y: 235, w: 104, h: 14, from: 62, to: 338, seconds: 6.5 };
 const WIND = { every: 6500, warn: 1500, blow: 1900, pull: 0.5 };
 
 export class Game {
@@ -64,6 +69,10 @@ export class Game {
     // How far the squeeze jar's walls stand in right now, and which twins the magnet jar is pulling together.
     this.inset = 0;
     this.pulls = [];
+    this.dots = [];
+    this.bricks = [];
+    this.paddle = null;
+    this.paddleDir = 1;
     this.fierce = false;
     this.gentle = false;
     this.hat = null;
@@ -96,15 +105,26 @@ export class Game {
     Engine.clear(this.engine);
   }
 
-  resize(cssW, cssH, dpr) {
+  /**
+   * @param pixelWidth for an arcade jar: the jar is drawn this many pixels wide on a small hidden canvas and copied
+   *   up without smoothing, so every pixel shows as a block (0 for the normal smooth drawing)
+   */
+  resize(cssW, cssH, dpr, pixelWidth = 0) {
     this.dpr = dpr;
     this.scale = cssW / W;
     this.canvas.width = Math.round(cssW * dpr);
     this.canvas.height = Math.round(cssH * dpr);
+    this.small = null;
+    if (pixelWidth) {
+      this.small = document.createElement('canvas');
+      this.small.width = pixelWidth;
+      this.small.height = Math.round((pixelWidth * cssH) / cssW);
+    }
   }
 
   buildWalls() {
     if (this.walls) Composite.remove(this.world, this.walls);
+    if (this.bricks?.length) Composite.remove(this.world, this.bricks);
     const T = WALL_T;
     const opts = { isStatic: true, friction: 0.5, restitution: 0.1 };
     // The side the pieces settle on is closed, the other one is open: the floor, or the lid of an upside-down jar.
@@ -123,6 +143,14 @@ export class Game {
       this.walls.push(Bodies.rectangle(W / 2, this.h - DIVIDER.height / 2 + DIVIDER.thick / 4, DIVIDER.thick, DIVIDER.height - DIVIDER.thick / 2, opts));
       this.walls.push(Bodies.circle(W / 2, top + DIVIDER.thick / 2, DIVIDER.thick / 2, opts));
     }
+    this.bricks = [];
+    this.paddle = null;
+    if (this.jar.hasBricks) this.layBricks();
+    if (this.jar.hasPaddle) {
+      // Slippery and springy, so nothing rides on it: it slides out from under whatever lands there.
+      this.paddle = Bodies.rectangle(W / 2, PADDLE.y, PADDLE.w, PADDLE.h, { isStatic: true, friction: 0, restitution: 0.85, chamfer: { radius: PADDLE.h / 2 } });
+      this.walls.push(this.paddle);
+    }
     if (this.jar.hasPegs) for (const [x, y] of PEGS) this.walls.push(Bodies.circle(x, y, PEG_R, { isStatic: true, friction: 0.05, restitution: 0.9 }));
     if (this.jar.hasWaist) {
       // Two round bulges in the side walls leave a narrow middle.
@@ -140,6 +168,41 @@ export class Game {
       }
     }
     Composite.add(this.world, this.walls);
+  }
+
+  /** The brick jar: put back every brick that is gone and whose place is free. */
+  layBricks() {
+    const w = (W - BRICKS.gap * (BRICKS.count + 1)) / BRICKS.count;
+    const pieces = this.bodies();
+    for (let i = 0; i < BRICKS.count; i++) {
+      if (this.bricks.some((brick) => brick.plugin.slot === i)) continue;
+      const x = BRICKS.gap + w / 2 + i * (w + BRICKS.gap);
+      const isFree = pieces.every((b) => Math.abs(b.position.x - x) > w / 2 + b.plugin.r || Math.abs(b.position.y - BRICKS.y) > BRICKS.h / 2 + b.plugin.r);
+      if (!isFree) continue;
+      const brick = Bodies.rectangle(x, BRICKS.y, w, BRICKS.h, { isStatic: true, friction: 0.4, restitution: 0.2 });
+      brick.plugin = { brick: true, slot: i, hits: 0, w };
+      this.bricks.push(brick);
+      Composite.add(this.world, brick);
+    }
+  }
+
+  /** A brick takes a knock; the second one breaks it. */
+  hitBrick(brick) {
+    if (!this.bricks.includes(brick)) return;
+    brick.plugin.hits++;
+    const color = BRICKS.colors[brick.plugin.slot];
+    if (brick.plugin.hits < 2) {
+      this.burst(brick.position.x, brick.position.y, color, 5, 10);
+      return;
+    }
+    this.bricks = this.bricks.filter((b) => b !== brick);
+    Composite.remove(this.world, brick);
+    this.burst(brick.position.x, brick.position.y, color, 16, 24);
+    if (this.mode === 'play') {
+      this.text(brick.position.x, brick.position.y, `+${BRICKS.points}`, color, 1);
+      this.addScore(BRICKS.points);
+      sfx.rock();
+    }
   }
 
   /** Switch to another jar (only between games): its gravity, feel and shape. */
@@ -274,6 +337,12 @@ export class Game {
     this.helpers = { shake: 1, pop: 1 };
     this.charge = 0;
     this.nextBubble = 2500;
+    this.dots = this.jar.hasDots ? this.freshDots() : [];
+    if (this.jar.hasBricks) {
+      if (this.bricks.length) Composite.remove(this.world, this.bricks);
+      this.bricks = [];
+      this.layBricks();
+    }
     this.wind = { nextAt: this.simTime + WIND.every, dir: 1, power: 0, warning: 0 };
     // Counted for the goals (goals.js).
     this.run = { kings: 0, rocks: 0, maxCombo: 0, rainbows: 0 };
@@ -341,6 +410,42 @@ export class Game {
   /** Start a game. With a seed (the daily jar) the same pieces drop for everyone. */
   start(seed = null) {
     this.reset('play', seed);
+  }
+
+  /** The maze jar's dots: a grid with a big one in each corner. */
+  freshDots() {
+    const dots = [];
+    const stepX = W / DOTS.cols;
+    const stepY = (this.h - 40 - DOTS.top) / (DOTS.rows - 1);
+    for (let row = 0; row < DOTS.rows; row++) {
+      for (let col = 0; col < DOTS.cols; col++) {
+        const isBig = (row === 0 || row === DOTS.rows - 1) && (col === 0 || col === DOTS.cols - 1);
+        dots.push({ x: stepX / 2 + col * stepX, y: DOTS.top + row * stepY, isBig, backAt: 0 });
+      }
+    }
+    return dots;
+  }
+
+  /** A slime that touches a dot eats it. A dot comes back after a while, once nothing lies on it. */
+  eatDots(list) {
+    for (const dot of this.dots) {
+      const touching = list.some((b) => Math.hypot(b.position.x - dot.x, b.position.y - dot.y) < b.plugin.r + DOTS.r);
+      if (dot.backAt) {
+        if (touching) dot.backAt = Math.max(dot.backAt, this.simTime + 1500);
+        else if (this.simTime >= dot.backAt) dot.backAt = 0;
+        continue;
+      }
+      if (!touching) continue;
+      dot.backAt = this.simTime + DOTS.backAfter;
+      if (this.mode !== 'play') continue;
+      const points = dot.isBig ? DOTS.bigPoints : DOTS.points;
+      this.addScore(points);
+      if (dot.isBig) {
+        this.text(dot.x, dot.y, `+${points}`, '#ffd93d', 1);
+        this.ring(dot.x, dot.y, 16, '#ffd93d');
+      }
+      sfx.dot(dot.isBig);
+    }
   }
 
   helperState() {
@@ -473,6 +578,7 @@ export class Game {
     this.cb.onNext?.(this.next);
     this.cb.onHelpers?.(this.helperState());
     this.cb.onDrop?.(this.drops);
+    if (this.jar.hasBricks && this.drops % BRICKS.backEvery === 0) this.layBricks();
     sfx.drop();
     return true;
   }
@@ -488,6 +594,12 @@ export class Game {
         const kick = Math.min(rv, 14) * 0.1;
         if (pa?.kind) pa.jv += kick;
         if (pb?.kind) pb.jv += kick;
+        // A piece that lands on a brick knocks it.
+        if (rv > 1.4) for (const [brick, other] of [[a, pb], [b, pa]]) if (brick.plugin?.brick && other?.kind) this.hitBrick(brick);
+        // A piece that lands on the paddle is batted the way the paddle is going.
+        for (const [bat, piece] of [[a, b], [b, a]]) {
+          if (bat === this.paddle && piece.plugin?.kind) Body.setVelocity(piece, { x: piece.velocity.x + this.paddleDir * 2.2, y: piece.velocity.y });
+        }
         // A bomb's fuse starts the moment it touches anything.
         for (const bomb of [pa, pb]) if (bomb?.kind === 'bomb' && !bomb.fuseAt) bomb.fuseAt = this.simTime + BOMB_FUSE_MS;
       }
@@ -566,6 +678,10 @@ export class Game {
   }
 
   crackRocks(x, y, R) {
+    // A merge right beside a brick knocks it too.
+    for (const brick of [...this.bricks]) {
+      if (Math.abs(brick.position.x - x) < brick.plugin.w / 2 + R + 10 && Math.abs(brick.position.y - y) < BRICKS.h / 2 + R + 10) this.hitBrick(brick);
+    }
     for (const b of this.bodies()) {
       if (b.plugin.kind !== 'rock') continue;
       if (Math.hypot(b.position.x - x, b.position.y - y) < R + b.plugin.r + 16) {
@@ -612,6 +728,12 @@ export class Game {
     this.burst(x, y, '#4A4160', 16, 20);
     const reach = BOMB_REACH * this.rScale;
     this.ring(x, y, reach, '#FFB45E');
+    for (const brick of [...this.bricks]) {
+      if (Math.hypot(brick.position.x - x, brick.position.y - y) < reach + brick.plugin.w / 2) {
+        this.hitBrick(brick);
+        this.hitBrick(brick);
+      }
+    }
     let popped = 0;
     for (const b of this.bodies()) {
       const d = Math.hypot(b.position.x - x, b.position.y - y);
@@ -721,6 +843,13 @@ export class Game {
       this.inset = inset;
     }
     if (this.jar.hasMagnet) this.pullTwins(list, dt);
+    if (this.jar.hasDots) this.eatDots(list);
+    if (this.paddle) {
+      const swing = Math.sin((this.simTime / (PADDLE.seconds * 1000)) * Math.PI * 2);
+      const x = (PADDLE.from + PADDLE.to) / 2 + (swing * (PADDLE.to - PADDLE.from)) / 2;
+      this.paddleDir = Math.sign(x - this.paddle.position.x) || 1;
+      Body.setPosition(this.paddle, { x, y: PADDLE.y }, true);
+    }
     if (this.jar.hasBubbles && this.mode === 'play') {
       // The fish bowl: now and then a bubble lifts one of the small slimes.
       this.nextBubble -= dt;
@@ -844,6 +973,43 @@ export class Game {
 
   /** What stands in a jar: the gumball jar's pegs, the hourglass jar's waist, the windy jar's gusts. */
   drawFittings(ctx, now) {
+    if (this.jar.hasDots) {
+      for (const dot of this.dots) {
+        if (dot.backAt) continue;
+        const r = dot.isBig ? DOTS.r * 2 * (0.85 + 0.15 * Math.sin(now * 0.008)) : DOTS.r;
+        ctx.fillStyle = dot.isBig ? '#ffd93d' : '#ffe9a8';
+        ctx.fillRect(dot.x - r, dot.y - r, r * 2, r * 2);
+      }
+    }
+    for (const brick of this.bricks) {
+      const { x, y } = brick.position;
+      const w = brick.plugin.w;
+      ctx.fillStyle = BRICKS.colors[brick.plugin.slot];
+      ctx.fillRect(x - w / 2, y - BRICKS.h / 2, w, BRICKS.h);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fillRect(x - w / 2, y - BRICKS.h / 2, w, 5);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.fillRect(x - w / 2, y + BRICKS.h / 2 - 5, w, 5);
+      if (brick.plugin.hits) {
+        // A crack.
+        ctx.strokeStyle = 'rgba(20, 10, 40, 0.8)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y - BRICKS.h / 2);
+        ctx.lineTo(x + 2, y - 2);
+        ctx.lineTo(x - 5, y + 2);
+        ctx.lineTo(x + 8, y + BRICKS.h / 2);
+        ctx.stroke();
+      }
+    }
+    if (this.paddle) {
+      const { x, y } = this.paddle.position;
+      ctx.fillStyle = '#f7f7ff';
+      ctx.fillRect(x - PADDLE.w / 2, y - PADDLE.h / 2, PADDLE.w, PADDLE.h);
+      ctx.fillStyle = '#4dd4ff';
+      ctx.fillRect(x - PADDLE.w / 2, y - PADDLE.h / 2, 14, PADDLE.h);
+      ctx.fillRect(x + PADDLE.w / 2 - 14, y - PADDLE.h / 2, 14, PADDLE.h);
+    }
     if (this.jar.hasDivider) {
       const top = this.h - DIVIDER.height;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
@@ -945,10 +1111,11 @@ export class Game {
   }
 
   render(now) {
-    const { ctx } = this;
-    const k = this.scale * this.dpr;
+    const target = this.small ?? this.canvas;
+    const ctx = this.small ? this.small.getContext('2d') : this.ctx;
+    const k = this.small ? this.small.width / W : this.scale * this.dpr;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.clearRect(0, 0, target.width, target.height);
     ctx.setTransform(k, 0, 0, k, 0, 0);
 
     const lvl = Math.min(1, this.danger / OVER_MS);
@@ -1056,5 +1223,14 @@ export class Game {
       }
     }
     ctx.globalAlpha = 1;
+
+    if (this.small) {
+      // The arcade look: the small picture, blown up block by block.
+      const screen = this.ctx;
+      screen.setTransform(1, 0, 0, 1, 0, 0);
+      screen.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      screen.imageSmoothingEnabled = false;
+      screen.drawImage(this.small, 0, 0, this.canvas.width, this.canvas.height);
+    }
   }
 }

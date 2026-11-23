@@ -127,6 +127,10 @@ export const sfx = {
   setTension(level) {
     music.tension = level;
   },
+  /** The maze jar: a dot is eaten, an old arcade "wak" (two notes for a big one). */
+  dot: fx((isBig) => {
+    note(isBig ? 520 : 880, isBig ? 1040 : 660, isBig ? 0.16 : 0.05, { type: 'square', vol: isBig ? 0.06 : 0.03 });
+  }),
   /** A slime let go: a small wet "plip". */
   drop: fx(() => {
     note(620, 250, 0.11, { vol: 0.1 });

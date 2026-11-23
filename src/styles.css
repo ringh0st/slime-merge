@@ -1181,6 +1181,52 @@ h2 {
 .jar-mini.jar-squeeze {
   background: linear-gradient(180deg, rgba(255, 226, 214, 0.6), rgba(255, 186, 170, 0.62));
 }
+/* The arcade jars: black glass, neon lines, big pixels and the faint stripes of an old screen. They look the same
+   by day and by night. */
+.jar.is-pixel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 4px);
+  pointer-events: none;
+}
+.jar.is-pixel .glint {
+  display: none;
+}
+.jar.jar-maze,
+.jar-mini.jar-maze,
+.jar.jar-brick,
+.jar-mini.jar-brick,
+.jar.jar-paddle,
+.jar-mini.jar-paddle {
+  border-color: #3d5bff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* Maze: neon blue walls on black. */
+.jar.jar-maze,
+.jar-mini.jar-maze {
+  background:
+    linear-gradient(#2b4dff, #2b4dff) 12% 18% / 30% 3px no-repeat, linear-gradient(#2b4dff, #2b4dff) 88% 18% / 30% 3px no-repeat,
+    linear-gradient(#2b4dff, #2b4dff) 12% 18% / 3px 14% no-repeat, linear-gradient(#2b4dff, #2b4dff) 88% 18% / 3px 14% no-repeat,
+    linear-gradient(#2b4dff, #2b4dff) 50% 46% / 36% 3px no-repeat, linear-gradient(#2b4dff, #2b4dff) 50% 46% / 3px 16% no-repeat,
+    linear-gradient(#2b4dff, #2b4dff) 10% 74% / 24% 3px no-repeat, linear-gradient(#2b4dff, #2b4dff) 90% 74% / 24% 3px no-repeat,
+    #05061a;
+}
+/* Bricks: deep night blue. */
+.jar.jar-brick,
+.jar-mini.jar-brick {
+  border-color: #ff5d73;
+  background: linear-gradient(180deg, #0a0820, #14103a);
+}
+/* Paddle: black with a dashed line down the middle, like an old tennis game. */
+.jar.jar-paddle,
+.jar-mini.jar-paddle {
+  border-color: #f7f7ff;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 10px, transparent 10px 22px) 50% 0 / 3px 100% no-repeat,
+    #060608;
+}
 /* At night the jars glow instead of going muddy: deep amber honey, a darker sky with a nebula, deep sea water. */
 :root[data-theme='dark'] .jar.jar-honey,
 :root[data-theme='dark'] .jar-mini.jar-honey {
