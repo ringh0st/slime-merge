@@ -40,19 +40,19 @@ export default function Stats({ onClose }) {
   if (state.status !== 'ready') {
     return (
       <div className="card stats">
-        <h2>Players</h2>
+        <h2>Admin</h2>
         {state.status === 'loading' ? (
           <p className="sub">Counting…</p>
         ) : (
           <>
-            <p className="sub">This page is for the owner.</p>
+            <p className="sub">For the game’s owner. Enter the admin password.</p>
             <form className="save-score" onSubmit={unlock}>
               <input
                 type="password"
                 value={typed}
                 onChange={(event) => setTyped(event.target.value)}
-                placeholder="Owner password"
-                aria-label="Owner password"
+                placeholder="Admin password"
+                aria-label="Admin password"
                 autoComplete="current-password"
                 enterKeyHint="go"
               />
@@ -76,7 +76,7 @@ export default function Stats({ onClose }) {
   const most = Math.max(1, ...stats.days.map((day) => day.players));
   return (
     <div className="card stats">
-      <h2>Players</h2>
+      <h2>Admin</h2>
       <ul className="stat-tiles">
         <li>
           <b>{stats.players_ever.toLocaleString()}</b>

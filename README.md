@@ -131,3 +131,7 @@ Jars open by total points. A game's points are added when it ends, and also when
 ## Buttons
 
 Jelly buttons (the block at the end of styles.css): glossy like the slimes, with a band of shine on top, a soft shade inside the bottom and a glow underneath, set by the `--jelly-*` variables per kind (`.btn`, `.btn.alt`, `.btn.ghost`). No hard edge underneath (the owner found it fake). Cards and helpers share the soft underside without the shine.
+
+## Admin
+
+"Admin" at the bottom of the home page (or `?stats` on the address) opens the owner's page: how many people play, behind the admin password that the server checks (`slime_owner` in supabase/slime_records.sql). The password is typed once per device.

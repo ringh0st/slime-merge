@@ -2914,3 +2914,18 @@ button.chip {
 :root[data-theme='dark'] .record-row:not(.top) .jar-tag {
   color: #e2d6ff;
 }
+
+/* The owner's door at the very bottom of the home page: quiet, so players pass it by. */
+.admin-link {
+  margin-top: 4px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  font: 500 12px 'DM Sans', system-ui, sans-serif;
+  opacity: 0.7;
+}
+.admin-link:focus-visible {
+  outline: 3px solid var(--accent-2);
+}
