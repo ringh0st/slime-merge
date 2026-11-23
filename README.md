@@ -109,3 +109,7 @@ A new player gets a random nickname at once (`src/nickname.js`, like "HappyMochi
 ## When points count
 
 Jars open by total points. A game's points are added when it ends, and also when the player goes home in the middle of it or replaces a left-open game with a new one (`bankPoints` in App.jsx; `banked` on the saved game keeps them from counting twice).
+
+## Buttons
+
+Jelly buttons (the block at the end of styles.css): glossy like the slimes, with a band of shine on top, a soft shade inside the bottom and a glow underneath, set by the `--jelly-*` variables per kind (`.btn`, `.btn.alt`, `.btn.ghost`). No hard edge underneath (the owner found it fake). Cards and helpers share the soft underside without the shine.

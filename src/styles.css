@@ -2637,3 +2637,125 @@ button.chip {
   font-size: 13.5px;
   line-height: 1.35;
 }
+
+/* ---------- Jelly buttons ----------
+   Owner's pick: the hard edge under buttons looked fake. Buttons are glossy like the slimes instead: a band of
+   shine on top, a soft shade inside the bottom and a glow underneath in the button's own color. A press sinks
+   the button a little and dims its glow. Cards and helpers get the same soft underside without the shine. */
+.btn {
+  --jelly-top: #b092ff;
+  --jelly-mid: var(--accent);
+  --jelly-low: #7c4cf0;
+  --jelly-shade: rgba(70, 30, 170, 0.45);
+  --jelly-glow: rgba(106, 63, 216, 0.6);
+  --jelly-shine: rgba(255, 255, 255, 0.42);
+  position: relative;
+  /* The shine sits over the button's color and under its label. */
+  isolation: isolate;
+  background-image: linear-gradient(180deg, var(--jelly-top) 0%, var(--jelly-mid) 55%, var(--jelly-low) 100%);
+  box-shadow:
+    0 12px 22px -10px var(--jelly-glow),
+    inset 0 -6px 10px -4px var(--jelly-shade),
+    inset 0 2px 1px rgba(255, 255, 255, 0.5);
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 4px;
+  height: 38%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--jelly-shine), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+  z-index: -1;
+}
+.btn.play-big::before {
+  left: 5%;
+  right: 5%;
+  top: 6px;
+  height: 34%;
+}
+.btn.save {
+  box-shadow:
+    0 8px 14px -8px var(--jelly-glow),
+    inset 0 -5px 8px -4px var(--jelly-shade),
+    inset 0 2px 1px rgba(255, 255, 255, 0.5);
+}
+.btn:active,
+.btn.alt:active,
+.btn.save:active {
+  transform: translateY(2px) scale(0.985);
+  box-shadow:
+    0 5px 10px -6px var(--jelly-glow),
+    inset 0 -3px 8px -4px var(--jelly-shade),
+    inset 0 2px 1px rgba(255, 255, 255, 0.4);
+}
+.btn.alt {
+  --jelly-top: #ffb0cd;
+  --jelly-mid: var(--accent-2);
+  --jelly-low: #f7659a;
+  --jelly-shade: rgba(190, 40, 100, 0.4);
+  --jelly-glow: rgba(217, 79, 132, 0.55);
+}
+.btn.ghost {
+  --jelly-top: #ffffff;
+  --jelly-mid: #fbf8ff;
+  --jelly-low: #f1eaff;
+  --jelly-shade: rgba(139, 92, 246, 0.22);
+  --jelly-glow: rgba(106, 63, 216, 0.4);
+  --jelly-shine: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 10px 20px -10px var(--jelly-glow),
+    inset 0 -5px 8px -4px var(--jelly-shade),
+    inset 0 0 0 1.5px var(--line);
+}
+.btn.ghost:active {
+  transform: translateY(2px) scale(0.985);
+  box-shadow:
+    0 4px 10px -6px var(--jelly-glow),
+    inset 0 -3px 6px -4px var(--jelly-shade),
+    inset 0 0 0 1.5px var(--line);
+}
+:root[data-theme='dark'] .btn.ghost {
+  --jelly-top: #4a3a72;
+  --jelly-mid: var(--key);
+  --jelly-low: #312550;
+  --jelly-shade: rgba(0, 0, 0, 0.4);
+  --jelly-glow: rgba(0, 0, 0, 0.6);
+  --jelly-shine: rgba(255, 255, 255, 0.14);
+}
+.btn.ghost.quiet,
+.btn.ghost.quiet:active {
+  background-image: none;
+  box-shadow: none;
+}
+.btn.ghost.quiet::before {
+  content: none;
+}
+.btn:disabled::before {
+  opacity: 0.4;
+}
+.home-daily,
+.home-doors button,
+.helper {
+  box-shadow:
+    0 10px 22px -12px var(--shadow),
+    inset 0 -6px 10px -6px color-mix(in oklab, var(--accent) 22%, transparent),
+    inset 0 0 0 1.5px var(--line);
+}
+.home-daily:active,
+.home-doors button:active,
+.helper:active:not(:disabled) {
+  transform: translateY(2px) scale(0.99);
+  box-shadow:
+    0 4px 10px -8px var(--shadow),
+    inset 0 -3px 8px -6px color-mix(in oklab, var(--accent) 22%, transparent),
+    inset 0 0 0 1.5px var(--line);
+}
+.helper.on {
+  box-shadow:
+    0 10px 22px -12px rgba(217, 79, 132, 0.7),
+    inset 0 -6px 10px -6px color-mix(in oklab, var(--accent-2) 30%, transparent),
+    inset 0 0 0 2.5px var(--accent-2);
+}
