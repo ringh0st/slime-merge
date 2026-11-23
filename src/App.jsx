@@ -1178,7 +1178,13 @@ export default function App() {
           )}
           {phase === 'jars' && (
             <div className="sheet">
-              <JarPicker jarId={jar.id} lifetimePoints={life.points} onPick={pickJar} onClose={closeCard} />
+              <JarPicker jarId={jar.id} lifetimePoints={life.points} onPick={(id) => {
+                  // Picking a jar is the whole visit: straight back to where the player came from.
+                  pickJar(id);
+                  closeCard();
+                }}
+                onClose={closeCard}
+              />
             </div>
           )}
           {phase === 'book' && (
