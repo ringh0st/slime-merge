@@ -85,8 +85,12 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
         </p>
       )}
 
-      <button className="btn alt fight-btn" onClick={() => open('fight')}>
-        Fight a friend
+      {/* A card like the daily jar, so Play stays the one loud button. */}
+      <button className="home-daily" onClick={() => open('fight')}>
+        <span className="home-daily-head">
+          <b>Fight a friend</b>
+          <span className="chip fresh">Fight</span>
+        </span>
         <small>Live, with a code · 3 minutes</small>
       </button>
 

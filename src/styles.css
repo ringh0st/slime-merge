@@ -1797,19 +1797,6 @@ button.chip {
 }
 
 /* ---------- Fight a friend ---------- */
-.btn.fight-btn {
-  display: grid;
-  gap: 1px;
-  width: 100%;
-  padding: 11px 20px 10px;
-  border-radius: 22px;
-  font-size: 22px;
-  line-height: 1.1;
-}
-.btn.fight-btn small {
-  font: 600 12.5px 'DM Sans', system-ui, sans-serif;
-  opacity: 0.92;
-}
 .card.fight {
   display: flex;
   flex-direction: column;
