@@ -38,8 +38,9 @@ async function call(fn, body) {
 const isOldServer = (error) => /could not find|schema cache|does not exist/i.test(error.message);
 
 /**
- * The top 20 of a period, in the world or in a club: [{ place, name, score, top, hat }].
- * `top` is the biggest slime the player made and `hat` what it wears (both may be missing).
+ * The top 20 of a period, in the world or in a club: [{ place, name, score, top, hat, jar }].
+ * `top` is the biggest slime the player made, `hat` what it wears and `jar` the jar the score was made in (all may
+ * be missing).
  */
 export async function loadRecords(period, club = null) {
   try {
@@ -83,12 +84,17 @@ export async function loadClubWinner(club) {
  * Save a score under a name; returns the name as stored.
  * @param extras { club, daily, top, hat }: the club code, the daily jar's day, the biggest slime and its hat
  */
-export async function saveScore(name, score, { club = null, daily = null, top = null, hat = null } = {}) {
+export async function saveScore(name, score, { club = null, daily = null, top = null, hat = null, jar = null } = {}) {
   const base = { p_name: tidyName(name), p_score: score };
-  try {
-    return (await call('slime_save_score', { ...base, p_club: club, p_daily: daily, p_top: top, p_hat: hat })).name;
-  } catch (error) {
-    if (!isOldServer(error)) throw error;
-    return (await call('slime_save_score', base)).name;
+  const extras = { ...base, p_club: club, p_daily: daily, p_top: top, p_hat: hat };
+  // A database that hasn't been updated yet doesn't know the newest fields: try without them, newest first.
+  const tries = [{ ...extras, p_jar: jar }, extras, base];
+  for (const [i, body] of tries.entries()) {
+    try {
+      return (await call('slime_save_score', body)).name;
+    } catch (error) {
+      if (!isOldServer(error) || i === tries.length - 1) throw error;
+    }
   }
+  return null;
 }

@@ -6,6 +6,10 @@ let musicBus = null;
 let echo = null;
 let sfxOn = true;
 let musicOn = true;
+// How the jar being played colors every effect: higher or deeper (pitch), more echo (wet), or the square beeps of
+// an old arcade machine (type), which the music takes on too.
+const PLAIN_VOICE = { pitch: 1, wet: 0, type: null };
+let voice = PLAIN_VOICE;
 
 /** The audio context, made on first use (browsers only allow sound after a tap). Null when sound is unavailable. */
 function ac() {
@@ -53,6 +57,15 @@ function ac() {
 function note(f0, f1, dur, { type = 'sine', vol = 0.18, delay = 0, attack = 0.008, wet = 0, bus = null } = {}) {
   const a = ac();
   if (!a) return;
+  if (voice.type) {
+    type = voice.type;
+    vol *= 0.55;
+  }
+  if (!bus) {
+    f0 *= voice.pitch;
+    f1 *= voice.pitch;
+    wet = voice.type ? 0 : Math.min(0.8, wet + voice.wet);
+  }
   const t = a.currentTime + delay;
   const osc = a.createOscillator();
   const gain = a.createGain();
@@ -127,6 +140,38 @@ export const sfx = {
   setTension(level) {
     music.tension = level;
   },
+  /** The jar being played gives every effect its own color (see `sound` in jars.js). */
+  setVoice(next) {
+    voice = { ...PLAIN_VOICE, ...next };
+  },
+  /** The paddle jar: the bat hits a piece. */
+  bat: fx(() => {
+    note(220, 440, 0.07, { type: 'square', vol: 0.07 });
+  }),
+  /** The gumball jar: a piece pings off a peg. */
+  peg: fx(() => {
+    note(1500, 1900, 0.09, { vol: 0.07, wet: 0.4 });
+  }),
+  /** The windy jar: a gust. */
+  gust: fx(() => {
+    puff(1.5, { type: 'bandpass', freq: 500, slideTo: 1500, vol: 0.16, q: 0.6 });
+  }),
+  /** The ship jar: a wave washes past as the jar rolls. */
+  wave: fx(() => {
+    puff(1.1, { type: 'lowpass', freq: 900, slideTo: 300, vol: 0.07, q: 0.4 });
+  }),
+  /** The squeeze jar: the walls are all the way in. */
+  squeeze: fx(() => {
+    note(110, 70, 0.5, { type: 'triangle', vol: 0.09 });
+  }),
+  /** The magnet jar: two twins start to pull together. */
+  zap: fx(() => {
+    note(300, 900, 0.12, { type: 'triangle', vol: 0.045, wet: 0.3 });
+  }),
+  /** The line jar: a row clears, four quick rising beeps. */
+  line: fx(() => {
+    [523, 659, 784, 1047].forEach((f, i) => note(f, f, 0.09, { type: 'square', vol: 0.05, delay: i * 0.06 }));
+  }),
   /** The maze jar: a dot is eaten, an old arcade "wak" (two notes for a big one). */
   dot: fx((isBig) => {
     note(isBig ? 520 : 880, isBig ? 1040 : 660, isBig ? 0.16 : 0.05, { type: 'square', vol: isBig ? 0.06 : 0.03 });

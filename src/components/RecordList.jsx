@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import SlimeIcon from './SlimeIcon.jsx';
+import { JARS, jarById } from '../game/jars.js';
 
 /** How often a board on screen looks for new scores. */
 const REFRESH_MS = 8000;
@@ -52,7 +53,9 @@ export default function RecordList({ load, watch, mine, empty = 'No records yet.
               <span className={`place p${row.place}`}>{row.place}</span>
               <SlimeIcon tier={row.top ?? 3} hat={row.hat} size={34} />
               <span className="who">
-                {row.name}
+                <span className="who-name">{row.name}</span>
+                {/* The jar the score was made in (scores saved before jars were recorded have none). */}
+                {row.jar && JARS.some((jar) => jar.id === row.jar) && <small className="jar-tag">{jarById(row.jar).name.replace(' jar', '')}</small>}
                 {crowned && crowned.toLowerCase() === row.name.toLowerCase() && (
                   <svg viewBox="0 0 24 24" width="26" height="26" aria-label="Last week’s winner" className="mini-crown">
                     <path d="M3 18l1.5-10 4.5 4 3-7 3 7 4.5-4L21 18z" fill="#ffd45e" stroke="#c9962a" strokeWidth="1.5" strokeLinejoin="round" />

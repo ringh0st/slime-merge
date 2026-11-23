@@ -87,7 +87,7 @@ The moon/sun button at the top switches between night and light (`src/theme.js`,
 
 ## Jars
 
-Fifteen jars (`src/game/jars.js`), each opened by total points and each with its own feel, day look and night look (`.jar-<id>` in styles.css):
+Seventeen jars (`src/game/jars.js`), each opened by total points and each with its own feel, day look and night look (`.jar-<id>` in styles.css):
 
 - Classic, Honey, Space, Fish bowl: different pull, stickiness and bounce; the bowl is round and bubbles lift small slimes.
 - **Balloon** (`isUpsideDown`): pieces are let go at the bottom, float up on strings and pile under the lid; the danger line is near the bottom ("Too low!").
@@ -100,10 +100,17 @@ Fifteen jars (`src/game/jars.js`), each opened by total points and each with its
 - **Twin** (`hasDivider`): a wall down the middle makes two rooms; slimes only meet over its top.
 - **Squeeze** (`squeezing`): the side walls slowly come in and go back out.
 
-- **Arcade jars** (`isPixel`): three jars in the style of 1980s arcade games (original takes, no characters or art from any real game). They are drawn on a small hidden canvas and copied up without smoothing, so every pixel is a block (`resize(…, pixelWidth)`), under faint screen stripes, and look the same by day and night.
+- **Arcade jars** (`isPixel`): five jars in the style of 1980s arcade games (original takes, no characters or art from any real game). They are drawn on a small hidden canvas and copied up without smoothing, so every pixel is a block (`resize(…, pixelWidth)`), under faint screen stripes, and look the same by day and night.
   - **Maze** (`hasDots`): a grid of glowing dots; every dot a slime touches is eaten for points (big corner dots are worth more) and comes back after a while.
   - **Brick** (`hasBricks`): a row of bricks; two knocks (a landing, a merge beside it, a bomb) break one for points, and missing bricks return every 8 drops where there is room.
   - **Paddle** (`hasPaddle`): a slippery bat slides from side to side and knocks landing pieces the way it is going.
+
+  - **Line** (`hasRows`): a row filled from wall to wall for half a second clears (everything on it pops, +100 and +10 a piece); each row's line glows brighter the fuller it is.
+  - **Alien** (`hasAliens`): a squad of five pixel critters marches under the line and steps down at each wall; a piece landing on one squashes it (+15), the last of a squad pays +150, and a new squad comes.
+
+Every jar also has its own sound (`sound` in jars.js, `sfx.setVoice`): deeper in honey, echoing in space, squeaky for balloons, square arcade beeps (music too) in the pixel jars, plus a sound for each jar's own event (gust, wave, peg, bat, squeeze, zap, dot, row).
+
+The boards show the jar each score was made in (`jar` on `slime_scores`, sent by `saveScore`).
 
 `?alljars` on the game's address opens every jar for that visit, to try jars that aren't earned yet.
 

@@ -282,7 +282,7 @@ export default function App() {
     if (!playerName || result.score < 1 || result.fight || savedResult.current === result) return;
     savedResult.current = result;
     setAutoSave('saving');
-    saveScore(playerName, result.score, { club, daily: result.daily, top: result.top, hat: wornHat })
+    saveScore(playerName, result.score, { club, daily: result.daily, top: result.top, hat: wornHat, jar: result.jar })
       .then(() => {
         setSaved(true);
         setAutoSave(null);
@@ -490,7 +490,7 @@ export default function App() {
           store.set('slime.best', finalScore);
         }
         const isFight = isFightingRef.current;
-        setResult({ score: finalScore, top, newBest, newHats, newJars, daily: day, fight: isFight });
+        setResult({ score: finalScore, top, newBest, newHats, newJars, daily: day, fight: isFight, jar: game.jar.id });
         setSaved(false);
         setAutoSave(null);
         // A game left from the pause card goes where the player asked, not to the game-over card.
@@ -507,6 +507,11 @@ export default function App() {
     game.resize(s0.w, s0.h, Math.min(window.devicePixelRatio || 1, 2.5), shownJar.isPixel ? PIXEL_JAR_WIDTH : 0);
     return () => game.destroy();
   }, []);
+
+  // Every jar has its own sound.
+  useEffect(() => {
+    sfx.setVoice(shownJar.sound);
+  }, [shownJar]);
 
   // After the game exists (effects run in order): dress the slimes and set up the jar.
   useEffect(() => {
@@ -721,7 +726,7 @@ export default function App() {
           store.set('slime.best', soFar);
         }
         if (playerName && soFar > 0) {
-          saveScore(playerName, soFar, { club, daily: dailyRun, top: gameRef.current.runMax, hat: wornHat })
+          saveScore(playerName, soFar, { club, daily: dailyRun, top: gameRef.current.runMax, hat: wornHat, jar: gameRef.current.jar.id })
             .then(() => setBoardStamp((n) => n + 1))
             .catch(() => {});
         }
@@ -1021,7 +1026,7 @@ export default function App() {
                   <SaveScore
                     score={result.score}
                     initialName={playerName}
-                    extras={{ club, daily: result.daily, top: result.top, hat: wornHat }}
+                    extras={{ club, daily: result.daily, top: result.top, hat: wornHat, jar: result.jar }}
                     onSaved={(name) => {
                       // Typed here the first time (or after a failed save): from now on it saves by itself.
                       savedResult.current = result;

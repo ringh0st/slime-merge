@@ -49,6 +49,16 @@ const WALL_T = 100;
 // Paddle: a bat that slides from side to side and knocks pieces away.
 const DOTS = { cols: 6, rows: 7, top: 170, r: 5, points: 5, bigPoints: 25, backAfter: 10000 };
 const BRICKS = { count: 6, y: 300, h: 22, gap: 4, points: 20, backEvery: 8, colors: ['#ff5d73', '#ff9f43', '#ffd93d', '#6bcb77', '#4d96ff', '#b983ff'] };
+// Line jar: a row that is filled from wall to wall clears. Alien jar: a squad marches under the line; land on one
+// to squash it.
+const ROWS = { first: 30, step: 60, count: 6, need: 0.86, hold: 500, reach: 34, points: 10, bonus: 100 };
+const ALIENS = { count: 5, w: 34, h: 24, gap: 26, side: 10, y: 190, drop: 14, maxSteps: 7, speed: 0.045, points: 15, bonus: 150, backAfter: 3500 };
+const ALIEN_COLORS = ['#6bff8a', '#4dd4ff', '#ff7ad9', '#ffd93d', '#b983ff'];
+// A little pixel critter of our own (11 by 8), with two leg poses for its march.
+const ALIEN_ART = [
+  ['....XXX....', '..XXXXXXX..', '.XXXXXXXXX.', '.XX..X..XX.', '.XXXXXXXXX.', '..XXXXXXX..', '.X..X.X..X.', 'X...X.X...X'],
+  ['....XXX....', '..XXXXXXX..', '.XXXXXXXXX.', '.XX..X..XX.', '.XXXXXXXXX.', '..XXXXXXX..', '..X.X.X.X..', '..X.X.X.X..'],
+];
 const PADDLE = { y: 235, w: 104, h: 14, from: 62, to: 338, seconds: 6.5 };
 const WIND = { every: 6500, warn: 1500, blow: 1900, pull: 0.5 };
 
@@ -73,6 +83,10 @@ export class Game {
     this.bricks = [];
     this.paddle = null;
     this.paddleDir = 1;
+    this.aliens = [];
+    this.squad = { x: 0, dir: 1, steps: 0, backAt: 0 };
+    this.rows = [];
+    this.rowFlash = null;
     this.fierce = false;
     this.gentle = false;
     this.hat = null;
@@ -125,6 +139,7 @@ export class Game {
   buildWalls() {
     if (this.walls) Composite.remove(this.world, this.walls);
     if (this.bricks?.length) Composite.remove(this.world, this.bricks);
+    if (this.aliens?.length) Composite.remove(this.world, this.aliens);
     const T = WALL_T;
     const opts = { isStatic: true, friction: 0.5, restitution: 0.1 };
     // The side the pieces settle on is closed, the other one is open: the floor, or the lid of an upside-down jar.
@@ -145,13 +160,22 @@ export class Game {
     }
     this.bricks = [];
     this.paddle = null;
+    this.aliens = [];
+    this.squad = { x: 0, dir: 1, steps: 0, backAt: 0 };
     if (this.jar.hasBricks) this.layBricks();
+    if (this.jar.hasAliens) this.sendSquad();
     if (this.jar.hasPaddle) {
       // Slippery and springy, so nothing rides on it: it slides out from under whatever lands there.
       this.paddle = Bodies.rectangle(W / 2, PADDLE.y, PADDLE.w, PADDLE.h, { isStatic: true, friction: 0, restitution: 0.85, chamfer: { radius: PADDLE.h / 2 } });
       this.walls.push(this.paddle);
     }
-    if (this.jar.hasPegs) for (const [x, y] of PEGS) this.walls.push(Bodies.circle(x, y, PEG_R, { isStatic: true, friction: 0.05, restitution: 0.9 }));
+    if (this.jar.hasPegs) {
+      for (const [x, y] of PEGS) {
+        const peg = Bodies.circle(x, y, PEG_R, { isStatic: true, friction: 0.05, restitution: 0.9 });
+        peg.plugin = { peg: true };
+        this.walls.push(peg);
+      }
+    }
     if (this.jar.hasWaist) {
       // Two round bulges in the side walls leave a narrow middle.
       for (const x of [WAIST.reach - WAIST.r, W - WAIST.reach + WAIST.r]) this.walls.push(Bodies.circle(x, WAIST.y, WAIST.r, { isStatic: true, friction: 0.2, restitution: 0.1 }));
@@ -184,6 +208,99 @@ export class Game {
       this.bricks.push(brick);
       Composite.add(this.world, brick);
     }
+  }
+
+  /** The alien jar: a new squad lines up at the top (an alien whose place is taken stays away). */
+  sendSquad() {
+    this.squad = { x: 0, dir: 1, steps: 0, backAt: 0 };
+    const pieces = this.bodies();
+    for (let i = 0; i < ALIENS.count; i++) {
+      const x = ALIENS.side + ALIENS.w / 2 + i * (ALIENS.w + ALIENS.gap);
+      if (pieces.some((b) => Math.abs(b.position.x - x) < ALIENS.w / 2 + b.plugin.r && Math.abs(b.position.y - ALIENS.y) < ALIENS.h / 2 + b.plugin.r)) continue;
+      const alien = Bodies.rectangle(x, ALIENS.y, ALIENS.w, ALIENS.h, { isStatic: true, friction: 0.1, restitution: 0.4 });
+      alien.plugin = { alien: true, slot: i };
+      this.aliens.push(alien);
+      Composite.add(this.world, alien);
+    }
+  }
+
+  /** The squad marches from side to side and steps down a little at each wall. */
+  march(dt) {
+    const q = this.squad;
+    if (!this.aliens.length) {
+      if (!q.backAt) q.backAt = this.simTime + ALIENS.backAfter;
+      else if (this.simTime >= q.backAt) this.sendSquad();
+      return;
+    }
+    const room = W - 2 * ALIENS.side - (ALIENS.count * ALIENS.w + (ALIENS.count - 1) * ALIENS.gap);
+    q.x += q.dir * ALIENS.speed * dt;
+    if (q.x < 0 || q.x > room) {
+      q.x = Math.max(0, Math.min(room, q.x));
+      q.dir = -q.dir;
+      q.steps = Math.min(ALIENS.maxSteps, q.steps + 1);
+    }
+    for (const alien of this.aliens) {
+      const x = ALIENS.side + ALIENS.w / 2 + alien.plugin.slot * (ALIENS.w + ALIENS.gap) + q.x;
+      Body.setPosition(alien, { x, y: ALIENS.y + q.steps * ALIENS.drop }, true);
+    }
+  }
+
+  /** A piece touched an alien: it is gone. A real hit from above scores; the last one of a squad pays a bonus. */
+  hitAlien(alien, isScored) {
+    if (!this.aliens.includes(alien)) return;
+    this.aliens = this.aliens.filter((a) => a !== alien);
+    Composite.remove(this.world, alien);
+    const color = ALIEN_COLORS[alien.plugin.slot];
+    this.burst(alien.position.x, alien.position.y, color, 12, 14);
+    if (this.mode !== 'play' || !isScored) return;
+    this.text(alien.position.x, alien.position.y, `+${ALIENS.points}`, color, 1);
+    this.addScore(ALIENS.points);
+    sfx.dot(true);
+    if (!this.aliens.length) {
+      this.text(W / 2, alien.position.y - 30, `+${ALIENS.bonus}`, '#ffd93d', 3);
+      this.addScore(ALIENS.bonus);
+      sfx.helper();
+    }
+  }
+
+  /** The line jar: how much of each row is filled; a row filled from wall to wall for a moment clears. */
+  checkRows(list) {
+    for (let i = 0; i < ROWS.count; i++) {
+      const y = this.h - ROWS.first - i * ROWS.step;
+      let filled = 0;
+      for (const b of list) {
+        const dy = Math.abs(b.position.y - y);
+        if (dy < b.plugin.r && !b.plugin.merging) filled += 2 * Math.sqrt(b.plugin.r * b.plugin.r - dy * dy);
+      }
+      const row = (this.rows[i] ??= { y, cover: 0, since: 0 });
+      row.y = y;
+      row.cover = Math.min(1, filled / W / ROWS.need);
+      if (row.cover < 1) row.since = 0;
+      else if (!row.since) row.since = this.simTime;
+      else if (this.simTime - row.since >= ROWS.hold) {
+        row.since = 0;
+        this.clearRow(y, list);
+        return;
+      }
+    }
+  }
+
+  clearRow(y, list) {
+    let popped = 0;
+    for (const b of list) {
+      if (Math.abs(b.position.y - y) > ROWS.reach) continue;
+      Composite.remove(this.world, b);
+      this.burst(b.position.x, b.position.y, b.plugin.frozen ? ICE : tierInfo(b.plugin.tier).color, 10, b.plugin.r);
+      if (b.plugin.kind === 'rock') this.run.rocks++;
+      popped++;
+    }
+    this.rowFlash = { y, life: 1 };
+    if (this.mode !== 'play') return;
+    const points = ROWS.bonus + popped * ROWS.points;
+    this.text(W / 2, y, `+${points}`, '#4dd4ff', 4);
+    this.addScore(points);
+    sfx.line();
+    this.cb.onBoom?.();
   }
 
   /** A brick takes a knock; the second one breaks it. */
@@ -338,6 +455,13 @@ export class Game {
     this.charge = 0;
     this.nextBubble = 2500;
     this.dots = this.jar.hasDots ? this.freshDots() : [];
+    this.rows = [];
+    this.rowFlash = null;
+    if (this.jar.hasAliens) {
+      if (this.aliens.length) Composite.remove(this.world, this.aliens);
+      this.aliens = [];
+      this.sendSquad();
+    }
     if (this.jar.hasBricks) {
       if (this.bricks.length) Composite.remove(this.world, this.bricks);
       this.bricks = [];
@@ -596,9 +720,20 @@ export class Game {
         if (pb?.kind) pb.jv += kick;
         // A piece that lands on a brick knocks it.
         if (rv > 1.4) for (const [brick, other] of [[a, pb], [b, pa]]) if (brick.plugin?.brick && other?.kind) this.hitBrick(brick);
+        // A piece pings off a peg.
+        for (const [peg, other] of [[a, pb], [b, pa]]) {
+          if (peg.plugin?.peg && other?.kind && rv > 2) {
+            this.ring(peg.position.x, peg.position.y, PEG_R * 1.6, '#ff7aa8');
+            if (this.mode === 'play') sfx.peg();
+          }
+        }
+        for (const [alien, other] of [[a, pb], [b, pa]]) if (alien.plugin?.alien && other?.kind) this.hitAlien(alien, rv > 2);
         // A piece that lands on the paddle is batted the way the paddle is going.
         for (const [bat, piece] of [[a, b], [b, a]]) {
-          if (bat === this.paddle && piece.plugin?.kind) Body.setVelocity(piece, { x: piece.velocity.x + this.paddleDir * 2.2, y: piece.velocity.y });
+          if (bat === this.paddle && piece.plugin?.kind) {
+            Body.setVelocity(piece, { x: piece.velocity.x + this.paddleDir * 2.2, y: piece.velocity.y });
+            if (this.mode === 'play' && rv > 1.5) sfx.bat();
+          }
         }
         // A bomb's fuse starts the moment it touches anything.
         for (const bomb of [pa, pb]) if (bomb?.kind === 'bomb' && !bomb.fuseAt) bomb.fuseAt = this.simTime + BOMB_FUSE_MS;
@@ -831,6 +966,8 @@ export class Game {
       const angle = ((this.jar.rocking.degrees * Math.PI) / 180) * Math.sin((this.simTime / (this.jar.rocking.seconds * 1000)) * Math.PI * 2);
       this.engine.gravity.x = Math.sin(angle) * this.jar.gravity;
       this.engine.gravity.y = Math.cos(angle) * this.jar.gravity;
+      // A wave washes past each time the jar rolls through level.
+      if (this.mode === 'play' && Math.sign(angle) !== Math.sign(this.tilt) && this.tilt !== 0) sfx.wave();
       this.setTilt(angle);
     }
     if (this.jar.hasWind && this.mode === 'play') this.blow(list, dt);
@@ -840,10 +977,22 @@ export class Game {
       const [left, right] = this.sideWalls;
       Body.setPosition(left, { x: -WALL_T / 2 + inset, y: left.position.y }, true);
       Body.setPosition(right, { x: W + WALL_T / 2 - inset, y: right.position.y }, true);
+      if (this.mode === 'play' && inset > SQUEEZE.reach * 0.97 && this.inset <= SQUEEZE.reach * 0.97) sfx.squeeze();
       this.inset = inset;
     }
-    if (this.jar.hasMagnet) this.pullTwins(list, dt);
+    if (this.jar.hasMagnet) {
+      const before = this.pulls.length;
+      this.pullTwins(list, dt);
+      // A small zap when a new pair starts to pull (not more than twice a second).
+      if (this.mode === 'play' && this.pulls.length > before && this.simTime - (this.lastZap ?? -1e9) > 500) {
+        this.lastZap = this.simTime;
+        sfx.zap();
+      }
+    }
     if (this.jar.hasDots) this.eatDots(list);
+    if (this.jar.hasAliens) this.march(dt);
+    if (this.jar.hasRows && this.mode === 'play') this.checkRows(list);
+    if (this.rowFlash && (this.rowFlash.life -= dt / 350) <= 0) this.rowFlash = null;
     if (this.paddle) {
       const swing = Math.sin((this.simTime / (PADDLE.seconds * 1000)) * Math.PI * 2);
       const x = (PADDLE.from + PADDLE.to) / 2 + (swing * (PADDLE.to - PADDLE.from)) / 2;
@@ -902,7 +1051,7 @@ export class Game {
       w.warning = 1 + since / WIND.warn;
       w.power = 0;
     } else if (since < WIND.blow) {
-      if (w.warning) sfx.shake();
+      if (w.warning) sfx.gust();
       w.warning = 0;
       w.power = Math.sin((since / WIND.blow) * Math.PI);
       for (const b of list) {
@@ -980,6 +1129,29 @@ export class Game {
         ctx.fillStyle = dot.isBig ? '#ffd93d' : '#ffe9a8';
         ctx.fillRect(dot.x - r, dot.y - r, r * 2, r * 2);
       }
+    }
+    if (this.jar.hasRows) {
+      // Each row's line glows brighter the fuller the row is.
+      for (const row of this.rows) {
+        ctx.fillStyle = `rgba(77, 212, 255, ${0.12 + 0.75 * row.cover * row.cover})`;
+        ctx.fillRect(0, row.y - 2, W * Math.max(0.04, row.cover), 4);
+        ctx.fillStyle = 'rgba(77, 212, 255, 0.12)';
+        ctx.fillRect(0, row.y - 1, W, 2);
+      }
+      if (this.rowFlash) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.85 * this.rowFlash.life})`;
+        ctx.fillRect(0, this.rowFlash.y - ROWS.reach, W, ROWS.reach * 2);
+      }
+    }
+    for (const alien of this.aliens) {
+      const art = ALIEN_ART[Math.floor(now / 380) % 2];
+      const cell = ALIENS.w / 11;
+      const left = alien.position.x - ALIENS.w / 2;
+      const top = alien.position.y - (cell * 8) / 2;
+      ctx.fillStyle = ALIEN_COLORS[alien.plugin.slot];
+      art.forEach((line, row) => {
+        for (let col = 0; col < line.length; col++) if (line[col] === 'X') ctx.fillRect(left + col * cell, top + row * cell, cell + 0.5, cell + 0.5);
+      });
     }
     for (const brick of this.bricks) {
       const { x, y } = brick.position;

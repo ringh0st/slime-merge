@@ -1198,7 +1198,11 @@ h2 {
 .jar.jar-brick,
 .jar-mini.jar-brick,
 .jar.jar-paddle,
-.jar-mini.jar-paddle {
+.jar-mini.jar-paddle,
+.jar.jar-line,
+.jar-mini.jar-line,
+.jar.jar-alien,
+.jar-mini.jar-alien {
   border-color: #3d5bff;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1226,6 +1230,25 @@ h2 {
   background:
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 10px, transparent 10px 22px) 50% 0 / 3px 100% no-repeat,
     #060608;
+}
+/* Line: black with a faint grid of squares. */
+.jar.jar-line,
+.jar-mini.jar-line {
+  border-color: #4dd4ff;
+  background:
+    linear-gradient(rgba(77, 212, 255, 0.1) 1px, transparent 1px) 0 0 / 10% 6.666%,
+    linear-gradient(90deg, rgba(77, 212, 255, 0.1) 1px, transparent 1px) 0 0 / 10% 6.666%,
+    #05070f;
+}
+/* Alien: deep space with a few square stars. */
+.jar.jar-alien,
+.jar-mini.jar-alien {
+  border-color: #6bff8a;
+  background:
+    radial-gradient(2px 2px at 14% 12%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 78% 20%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 40% 52%, #9fb4ff 50%, transparent 51%), radial-gradient(2px 2px at 88% 64%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 22% 80%, #9fb4ff 50%, transparent 51%),
+    #04040c;
 }
 /* At night the jars glow instead of going muddy: deep amber honey, a darker sky with a nebula, deep sea water. */
 :root[data-theme='dark'] .jar.jar-honey,
@@ -2867,4 +2890,27 @@ button.chip {
 .record-list .record-row.top,
 .record-list .record-row.mine {
   margin: 2px;
+}
+
+/* The jar a score was made in: a small tag after the name. */
+.record-row .who-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.jar-tag {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--accent-deep);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  font: 600 11px 'DM Sans', system-ui, sans-serif;
+  white-space: nowrap;
+}
+.record-row.top .jar-tag {
+  color: inherit;
+  background: rgba(255, 255, 255, 0.55);
+}
+:root[data-theme='dark'] .record-row:not(.top) .jar-tag {
+  color: #e2d6ff;
 }
