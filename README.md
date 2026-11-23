@@ -105,3 +105,7 @@ The daily jar and fights always use Classic.
 ## Nicknames
 
 A new player gets a random nickname at once (`src/nickname.js`, like "HappyMochi42"), so scores reach the boards from the first game; the chip on the home page changes it. Scores saved under an earlier name stay on the boards under that name.
+
+## When points count
+
+Jars open by total points. A game's points are added when it ends, and also when the player goes home in the middle of it or replaces a left-open game with a new one (`bankPoints` in App.jsx; `banked` on the saved game keeps them from counting twice).

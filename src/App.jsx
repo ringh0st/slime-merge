@@ -288,11 +288,25 @@ export default function App() {
       .catch(() => setAutoSave('failed'));
   }, [result, playerName]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Points of the game being played that already count toward the total that opens jars (see bankPoints).
+  const bankedRef = useRef(0);
+  /**
+   * Adds points to the total that opens jars. A game's points count when it ends, but also when the player goes
+   * home in the middle of it or starts another one instead, so a long game left open isn't worth nothing.
+   */
+  const bankPoints = useCallback((points) => {
+    if (points <= 0) return;
+    const nextLife = { ...lifeRef.current, points: lifeRef.current.points + points };
+    lifeRef.current = nextLife;
+    setLife(nextLife);
+    store.set('slime.life', nextLife);
+  }, []);
+
   /** Writes the game being played to the device, to continue it later. */
   const keepRun = useCallback(() => {
     const state = gameRef.current.serialize();
     if (!state || state.drops < 1) return;
-    const run = { day: dailyRun, jarId: jar.id, score: state.score, state };
+    const run = { day: dailyRun, jarId: jar.id, score: state.score, banked: bankedRef.current, state };
     store.set('slime.run', run);
     setSavedRun(run);
   }, [dailyRun, jar]);
@@ -453,6 +467,9 @@ export default function App() {
         const day = dailyRunRef.current;
         const playedNow = day ? withDailyScore(dailyPlayedRef.current, day, finalScore) : dailyPlayedRef.current;
         const nextLife = lifeAfterGame(lifeRef.current, finalScore, run, Boolean(day), day ? dailyStreak(playedNow, day) : 0);
+        // Points that were counted when the player went home in the middle of this game aren't counted twice.
+        nextLife.points -= bankedRef.current;
+        bankedRef.current = 0;
         // Hats and jars this game unlocked, to celebrate on the game-over card.
         const newHats = unlockedHats(nextLife).filter((id) => !unlockedHats(lifeRef.current).includes(id));
         const newJars = JARS.filter((j) => isJarOpen(j, nextLife.points) && !isJarOpen(j, lifeRef.current.points));
@@ -557,6 +574,10 @@ export default function App() {
     (day = null, fightSeed = null) => {
       sfx.unlock();
       sfx.click();
+      // A game left open that is now replaced: its points still count.
+      const left = store.get('slime.run', null);
+      if (left) bankPoints(left.score - (left.banked ?? 0));
+      bankedRef.current = 0;
       forgetRun();
       setDailyRun(day);
       // A first game ever: plain pieces for a while, and tips in the jar.
@@ -576,7 +597,7 @@ export default function App() {
       setIsPopping(false);
       setPhase('play');
     },
-    [jar, forgetRun],
+    [jar, forgetRun, bankPoints],
   );
   /** Continue the game that was left open. */
   const continueRun = () => {
@@ -589,6 +610,7 @@ export default function App() {
     isFightingRef.current = false;
     setCoach(null);
     if (!run.day) pickJar(run.jarId);
+    bankedRef.current = run.banked ?? 0;
     gameRef.current.gentle = false;
     gameRef.current.setJar(run.day ? JARS[0] : jarById(run.jarId));
     gameRef.current.setShape();
@@ -688,8 +710,10 @@ export default function App() {
       else {
         // Going home doesn't end the game: it waits there to be continued. What was scored so far already
         // counts for Best and, with a nickname, for the board.
-        keepRun();
         const soFar = gameRef.current.score;
+        bankPoints(soFar - bankedRef.current);
+        bankedRef.current = soFar;
+        keepRun();
         if (soFar > best) {
           setBest(soFar);
           store.set('slime.best', soFar);
