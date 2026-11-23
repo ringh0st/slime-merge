@@ -168,6 +168,9 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
         </button>
       )}
       <p className="hint">Tap or click to drop · ← → and Space work too</p>
+      <a className="admin-link more-games" href="https://lumipals.app/">
+        More games by Rinny →
+      </a>
       {/* For the owner: the player counts, behind the owner's password. */}
       <button className="admin-link" onClick={() => open('stats')}>
         Admin

@@ -79,7 +79,7 @@ After a game, players can save their score under a name and see the best of the 
 
 ## Opening screen and version
 
-`src/components/Splash.jsx` shows for a few seconds at every start: two slimes merge in a little jar, then the game's name, a loading bar, "A Ringhost's Games production" and the version. A tap, Enter or Escape skips it. The version comes from `package.json` (`src/appInfo.js`); bump it for each release.
+`src/components/Splash.jsx` shows for a few seconds at every start: two slimes merge in a little jar, then the game's name, a loading bar, "A Rinny's Games production" and the version. A tap, Enter or Escape skips it. The version comes from `package.json` (`src/appInfo.js`); bump it for each release.
 
 ## Night mode
 
@@ -135,3 +135,7 @@ Jelly buttons (the block at the end of styles.css): glossy like the slimes, with
 ## Admin
 
 "Admin" at the bottom of the home page (or `?stats` on the address) opens the owner's page: how many people play, behind the admin password that the server checks (`slime_owner` in supabase/slime_records.sql). The password is typed once per device.
+
+## Rinny's Games
+
+The studio name on the opening screen is Rinny's Games (`src/appInfo.js`), and the home page links to https://lumipals.app/, the page with all the owner's games (built in the prism repository, `site/index.html`).

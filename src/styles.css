@@ -2935,3 +2935,15 @@ button.chip {
   width: 120px;
   margin: 0 auto;
 }
+
+/* The way to the page with all of Rinny's games. */
+.more-games {
+  opacity: 1;
+  color: var(--accent-deep);
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+:root[data-theme='dark'] .more-games {
+  color: #d9c9ff;
+}
