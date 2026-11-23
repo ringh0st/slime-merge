@@ -578,7 +578,7 @@ export default function App() {
 
   /** Start a game: a normal one in the chosen jar, that day's jar (with a day), or a fight (with its seed). */
   const start = useCallback(
-    (day = null, fightSeed = null) => {
+    (day = null, fightSeed = null, inJar = null) => {
       sfx.unlock();
       sfx.click();
       // A game left open that is now replaced: its points still count.
@@ -594,7 +594,7 @@ export default function App() {
       setIsFighting(Boolean(fightSeed));
       isFightingRef.current = Boolean(fightSeed);
       // The daily jar and a fight are always in the classic jar, so they are the same for everyone.
-      gameRef.current.setJar(day || fightSeed ? JARS[0] : jar);
+      gameRef.current.setJar(day || fightSeed ? JARS[0] : (inJar ?? jar));
       // A fight is played in a short jar with small slimes, so both jars fit on the screen.
       gameRef.current.setShape(fightSeed ? FIGHT_SHAPE : undefined);
       gameRef.current.start(fightSeed ?? (day ? `daily-${day}` : null));
@@ -1185,7 +1185,13 @@ export default function App() {
           )}
           {phase === 'jars' && (
             <div className="sheet">
-              <JarPicker jarId={jar.id} lifetimePoints={life.points} openGameJar={savedRun && !savedRun.day ? jarById(savedRun.jarId) : null} onPick={(id) => {
+              <JarPicker jarId={jar.id} lifetimePoints={life.points} openGame={savedRun && !savedRun.day ? { jar: jarById(savedRun.jarId), score: savedRun.score } : null}
+                onStart={(id) => {
+                  // Asked and answered on the jars page: a new game in the picked jar, right now.
+                  pickJar(id);
+                  start(null, null, jarById(id));
+                }}
+                onPick={(id) => {
                   // Picking a jar is the whole visit: straight back to where the player came from.
                   pickJar(id);
                   closeCard();

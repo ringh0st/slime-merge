@@ -1,19 +1,48 @@
+import { useState } from 'react';
 import { JARS, isJarOpen } from '../game/jars.js';
 import SlimeIcon from './SlimeIcon.jsx';
 
 /**
  * Pick the jar to play in. A locked jar says how many more points open it.
- * @param openGameJar the jar of a game that was left open (null for none): that game stays in its jar, so the page
- *   says that another jar means a new game.
+ * @param openGame a game that was left open: { jar, score } (null for none). That game stays in its jar, so picking
+ *   another jar asks first: Play starts a new game there and ends the open one, Back keeps everything.
+ * @param onStart starts a new game in a jar right away (after that question)
  */
-export default function JarPicker({ jarId, lifetimePoints, openGameJar = null, onPick, onClose }) {
+export default function JarPicker({ jarId, lifetimePoints, openGame = null, onPick, onStart, onClose }) {
+  // The jar the player tapped while a game in another jar is open.
+  const [asked, setAsked] = useState(null);
+  const pick = (jar) => {
+    if (openGame && jar.id !== openGame.jar.id) setAsked(jar);
+    else onPick(jar.id);
+  };
+  if (asked) {
+    return (
+      <div className="card jars" role="alertdialog" aria-labelledby="new-game-title">
+        <span className={`jar-mini jar-${asked.id} ask-jar`} aria-hidden="true">
+          <SlimeIcon tier={3} size={26} />
+          <SlimeIcon tier={6} size={34} />
+          <SlimeIcon tier={1} size={20} />
+        </span>
+        <h2 id="new-game-title">New game in the {asked.name}?</h2>
+        <p className="sub">
+          Your open game in the <b>{openGame.jar.name}</b> ({openGame.score.toLocaleString()} points) will end. Its points are kept.
+        </p>
+        <button className="btn" onClick={() => onStart(asked.id)} autoFocus>
+          Play
+        </button>
+        <button className="btn ghost" onClick={() => setAsked(null)}>
+          Back
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="card jars">
       <h2>Jars</h2>
       <p className="sub">Each jar feels different. Points from every game open new ones.</p>
-      {openGameJar && (
+      {openGame && (
         <p className="jar-note" role="note">
-          Your open game stays in the <b>{openGameJar.name}</b>. Pick another jar to start a new game in it.
+          You have a game open in the <b>{openGame.jar.name}</b>. Another jar starts a new game.
         </p>
       )}
       <ul className="jar-grid">
@@ -25,7 +54,7 @@ export default function JarPicker({ jarId, lifetimePoints, openGameJar = null, o
                 className={`jar-tile ${jar.id === jarId ? 'on' : ''}`}
                 disabled={!isOpen}
                 aria-pressed={jar.id === jarId}
-                onClick={() => onPick(jar.id)}
+                onClick={() => pick(jar)}
               >
                 <span className={`jar-mini jar-${jar.id}`} aria-hidden="true">
                   <SlimeIcon tier={3} size={26} />
