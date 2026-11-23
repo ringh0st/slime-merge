@@ -1111,6 +1111,26 @@ h2 {
 .jar-mini.jar-bowl {
   background: linear-gradient(180deg, rgba(190, 236, 248, 0.45), rgba(120, 205, 232, 0.6));
 }
+/* At night the jars glow instead of going muddy: deep amber honey, a darker sky with a nebula, deep sea water. */
+:root[data-theme='dark'] .jar.jar-honey,
+:root[data-theme='dark'] .jar-mini.jar-honey {
+  background: linear-gradient(180deg, rgba(120, 72, 14, 0.55), rgba(196, 124, 22, 0.6));
+}
+:root[data-theme='dark'] .jar.jar-space,
+:root[data-theme='dark'] .jar-mini.jar-space {
+  background:
+    radial-gradient(1.5px 1.5px at 18% 22%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 72% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 54% 44%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 30% 66%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 84% 58%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 10% 86%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 42% 14%, #cfd6ff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 90% 34%, #cfd6ff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 64% 78%, #cfd6ff 50%, transparent 51%),
+    radial-gradient(70% 40% at 75% 25%, rgba(120, 70, 220, 0.35), transparent 70%), radial-gradient(60% 35% at 20% 70%, rgba(30, 110, 170, 0.3), transparent 70%),
+    linear-gradient(180deg, #07061a, #130d33);
+}
+:root[data-theme='dark'] .jar.jar-bowl,
+:root[data-theme='dark'] .jar-mini.jar-bowl {
+  background: linear-gradient(180deg, rgba(28, 96, 128, 0.5), rgba(14, 122, 150, 0.62));
+}
 /* The fish bowl's round bottom: half a circle as wide as the jar (the jar is 2 wide by 3 tall). */
 .jar.jar-bowl,
 .jar-back.jar-bowl {
@@ -2300,10 +2320,8 @@ button.chip {
 .mini-crown {
   filter: drop-shadow(0 2px 0 #c9962a);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .record-row.top .who {
-    color: inherit;
-  }
+:root[data-theme='dark'] .record-row.top .who {
+  color: inherit;
 }
 
 /* The opening screen: slimes merge in a little jar while the game loads underneath. */

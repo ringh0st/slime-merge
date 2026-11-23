@@ -20,7 +20,8 @@ import { EMOTES, rocksForCombo } from './fight.js';
 import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import Splash from './components/Splash.jsx';
-import { haptic } from './native.js';
+import { currentTheme, saveTheme } from './theme.js';
+import { haptic, setStatusBar } from './native.js';
 import { store } from './storage.js';
 import { countGame, countVisit, loadRecords, saveScore } from './records.js';
 import { nextToBeat, whoPassed } from './club.js';
@@ -68,6 +69,17 @@ const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'figh
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
 const Icon = {
+  moon: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5Z" />
+    </svg>
+  ),
+  sun: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+    </svg>
+  ),
   home: (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 11.5 12 4l8 7.5M6.5 10v9h11v-9M10 19v-5h4v5" />
@@ -166,6 +178,14 @@ export default function App() {
   // Sound effects and music have their own switches (the old single mute turned both off).
   // The opening screen, once per start of the app (not on the owner's numbers page).
   const [isSplashUp, setIsSplashUp] = useState(() => !new URLSearchParams(window.location.search).has('stats'));
+  const [theme, setTheme] = useState(currentTheme);
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    saveTheme(next);
+    setStatusBar(next === 'dark');
+    setTheme(next);
+    sfx.click();
+  };
   const [sfxOn, setSfxOn] = useState(() => store.get('slime.sfx', !store.get('slime.muted', false)));
   const [musicOn, setMusicOn] = useState(() => store.get('slime.music', !store.get('slime.muted', false)));
   const [isSoundOpen, setIsSoundOpen] = useState(false);
@@ -718,6 +738,9 @@ export default function App() {
               {Icon.pause}
             </button>
           )}
+          <button className="icon-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Light mode' : 'Night mode'}>
+            {theme === 'dark' ? Icon.sun : Icon.moon}
+          </button>
           <button className="icon-btn" onClick={() => setIsSoundOpen((open) => !open)} aria-label="Sound" aria-expanded={isSoundOpen}>
             {sfxOn || musicOn ? Icon.sound : Icon.mute}
           </button>

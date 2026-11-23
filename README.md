@@ -80,3 +80,7 @@ After a game, players can save their score under a name and see the best of the 
 ## Opening screen and version
 
 `src/components/Splash.jsx` shows for a few seconds at every start: two slimes merge in a little jar, then the game's name, a loading bar, "A Ringhost's Games production" and the version. A tap, Enter or Escape skips it. The version comes from `package.json` (`src/appInfo.js`); bump it for each release.
+
+## Night mode
+
+The moon/sun button at the top switches between night and light (`src/theme.js`, saved as `slime.theme`; until the player picks, the game follows the device). Styles for night go under `:root[data-theme='dark']`. The Honey, Space and Fish bowl jars have their own night looks.
