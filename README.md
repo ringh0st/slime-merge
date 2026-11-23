@@ -101,3 +101,7 @@ The daily jar and fights always use Classic.
 ## Updates reach open copies
 
 `src/update.js` asks for `version.json` (written at build) at every start; an older copy loads the new one. Bump the version in `package.json` for each release.
+
+## Nicknames
+
+A new player gets a random nickname at once (`src/nickname.js`, like "HappyMochi42"), so scores reach the boards from the first game; the chip on the home page changes it. Scores saved under an earlier name stay on the boards under that name.

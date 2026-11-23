@@ -20,6 +20,7 @@ import { EMOTES, rocksForCombo } from './fight.js';
 import SaveScore from './components/SaveScore.jsx';
 import SlimeIcon from './components/SlimeIcon.jsx';
 import Splash from './components/Splash.jsx';
+import { randomNickname } from './nickname.js';
 import { currentTheme, saveTheme } from './theme.js';
 import { haptic, setStatusBar } from './native.js';
 import { store } from './storage.js';
@@ -195,7 +196,15 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [size, setSize] = useState(fitJar);
   // Records: the name scores are saved under, whether this run's score is saved, and where the records card goes back to.
-  const [playerName, setPlayerName] = useState(() => store.get('slime.name', ''));
+  // A new player gets a random nickname right away (they can change it on the home page), so their scores show
+  // on the boards from the first game.
+  const [playerName, setPlayerName] = useState(() => {
+    const kept = store.get('slime.name', '');
+    if (kept) return kept;
+    const fresh = randomNickname();
+    store.set('slime.name', fresh);
+    return fresh;
+  });
   const [saved, setSaved] = useState(false);
   // 'saving' | 'failed' | null: how the automatic save of this game's score is going.
   const [autoSave, setAutoSave] = useState(null);
