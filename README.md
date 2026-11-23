@@ -138,4 +138,4 @@ Jelly buttons (the block at the end of styles.css): glossy like the slimes, with
 
 ## Rinny's Games
 
-The studio name on the opening screen is Rinny's Games (`src/appInfo.js`), and the home page links to https://lumipals.app/, the page with all the owner's games (built in the prism repository, `site/index.html`).
+The studio name on the opening screen is Rinny's Games (`src/appInfo.js`), and a four-squares icon in the top bar of the home page links to https://lumipals.app/, the page with all the owner's games (built in the prism repository, `site/index.html`).

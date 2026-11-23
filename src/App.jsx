@@ -22,7 +22,7 @@ import SlimeIcon from './components/SlimeIcon.jsx';
 import Splash from './components/Splash.jsx';
 import { randomNickname } from './nickname.js';
 import { currentTheme, saveTheme } from './theme.js';
-import { haptic, setStatusBar } from './native.js';
+import { haptic, isNative, setStatusBar } from './native.js';
 import { store } from './storage.js';
 import { countGame, countVisit, loadRecords, saveScore } from './records.js';
 import { nextToBeat, whoPassed } from './club.js';
@@ -72,6 +72,14 @@ const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'figh
 const NO_HELPERS = { shake: 0, pop: 0, charge: 0, held: null, canHold: false };
 
 const Icon = {
+  games: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+      <rect x="3" y="3" width="8" height="8" rx="2.5" />
+      <rect x="13" y="3" width="8" height="8" rx="2.5" />
+      <rect x="3" y="13" width="8" height="8" rx="2.5" />
+      <rect x="13" y="13" width="8" height="8" rx="2.5" />
+    </svg>
+  ),
   moon: (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5Z" />
@@ -784,6 +792,12 @@ export default function App() {
           </span>
         </div>
         <div className="actions">
+          {/* On the game's home page: the way back to all of Rinny's games (the apps have no such page). */}
+          {phase === 'home' && !isNative && (
+            <a className="icon-btn" href="https://lumipals.app/" aria-label="All games" title="All games">
+              {Icon.games}
+            </a>
+          )}
           {/* Home is always one tap away (the home page itself doesn't need it). */}
           {phase !== 'home' && phase !== 'news' && (
             <button className="icon-btn" onClick={goHome} aria-label="Home">

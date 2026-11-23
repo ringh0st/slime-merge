@@ -2947,3 +2947,9 @@ button.chip {
 :root[data-theme='dark'] .more-games {
   color: #d9c9ff;
 }
+
+/* An icon button that is a link (all games). */
+a.icon-btn {
+  color: inherit;
+  text-decoration: none;
+}
