@@ -2626,3 +2626,14 @@ button.chip {
     display: none !important;
   }
 }
+
+/* On the jars page: a game left open keeps its jar. */
+.jar-note {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 14px;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--accent-2) 16%, var(--glass-strong));
+  font-size: 13.5px;
+  line-height: 1.35;
+}

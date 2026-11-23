@@ -1178,7 +1178,7 @@ export default function App() {
           )}
           {phase === 'jars' && (
             <div className="sheet">
-              <JarPicker jarId={jar.id} lifetimePoints={life.points} onPick={(id) => {
+              <JarPicker jarId={jar.id} lifetimePoints={life.points} openGameJar={savedRun && !savedRun.day ? jarById(savedRun.jarId) : null} onPick={(id) => {
                   // Picking a jar is the whole visit: straight back to where the player came from.
                   pickJar(id);
                   closeCard();

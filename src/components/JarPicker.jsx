@@ -1,12 +1,21 @@
 import { JARS, isJarOpen } from '../game/jars.js';
 import SlimeIcon from './SlimeIcon.jsx';
 
-/** Pick the jar to play in. A locked jar says how many more points open it. */
-export default function JarPicker({ jarId, lifetimePoints, onPick, onClose }) {
+/**
+ * Pick the jar to play in. A locked jar says how many more points open it.
+ * @param openGameJar the jar of a game that was left open (null for none): that game stays in its jar, so the page
+ *   says that another jar means a new game.
+ */
+export default function JarPicker({ jarId, lifetimePoints, openGameJar = null, onPick, onClose }) {
   return (
     <div className="card jars">
       <h2>Jars</h2>
       <p className="sub">Each jar feels different. Points from every game open new ones.</p>
+      {openGameJar && (
+        <p className="jar-note" role="note">
+          Your open game stays in the <b>{openGameJar.name}</b>. Pick another jar to start a new game in it.
+        </p>
+      )}
       <ul className="jar-grid">
         {JARS.map((jar) => {
           const isOpen = isJarOpen(jar, lifetimePoints);
