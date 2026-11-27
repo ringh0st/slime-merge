@@ -139,3 +139,7 @@ Jelly buttons (the block at the end of styles.css): glossy like the slimes, with
 ## Rinny's Games
 
 The studio name on the opening screen is Rinny's Games (`src/appInfo.js`), and a four-squares icon in the top bar of the home page links to https://lumipals.app/, the page with all the owner's games (built in the prism repository, `site/index.html`).
+
+## Play-test fixes (1.5.5)
+
+From a play-test on phone screens: Play again sits right under the result on the game-over card, above the unlocks, so it's never below the edge on a small phone, and a new hat says its name; after a daily jar it reads Play Classic. A tap during the short wait between drops is kept and dropped as soon as it's allowed (`pendingDrop` in engine.js), so no tap is lost. A brand-new player doesn't get the "What's new" card. The fight's round score reads 1 – 0 on one line. On narrow phones the name in the top bar steps aside during a game, the next slime shows as a picture only and the helpers show their word only. The nickname editor has a ✕ (and Escape) to cancel.

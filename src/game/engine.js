@@ -443,6 +443,7 @@ export class Game {
     this.reportedDanger = 0;
     this.runMax = 4;
     this.canDrop = true;
+    this.pendingDrop = false;
     this.over = false;
     this.paused = false;
     this.nextDemo = 0;
@@ -690,7 +691,14 @@ export class Game {
   }
 
   drop() {
-    if (this.mode !== 'play' || !this.canDrop || this.over || this.paused) return false;
+    if (this.mode !== 'play' || this.over || this.paused) return false;
+    // A tap during the short wait between drops is kept and dropped the moment it's allowed, so no tap is lost
+    // (a fast-tapping child saw "it didn't drop" about one tap in thirteen).
+    if (!this.canDrop) {
+      this.pendingDrop = true;
+      return false;
+    }
+    this.pendingDrop = false;
     const b = this.spawn(this.current.tier, this.clampAim(), this.dropY, { x: 0, y: this.fall }, Boolean(this.current.frozen));
     b.plugin.jv = -1.4; // stretch as it falls
     this.drops++;
@@ -959,7 +967,10 @@ export class Game {
       p.jv += (-340 * p.j - 11 * p.jv) * s;
       p.j = Math.max(-0.25, Math.min(0.25, p.j + p.jv * s));
     }
-    if (!this.canDrop && this.simTime >= this.dropReadyAt) this.canDrop = true;
+    if (!this.canDrop && this.simTime >= this.dropReadyAt) {
+      this.canDrop = true;
+      if (this.pendingDrop) this.drop();
+    }
     for (const b of list) if (b.plugin.kind === 'bomb' && b.plugin.fuseAt && this.simTime >= b.plugin.fuseAt) this.explode(b);
     if (this.jar.rocking) {
       // The ship jar rocks like a boat: the pull leans with it, so the pile slides.

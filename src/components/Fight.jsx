@@ -142,7 +142,9 @@ export default function Fight({ fight, me, onHost, onJoin, onAgain, onLeave }) {
       <p className="sub">{REASONS[fight.outcome]?.[fight.reason]}</p>
       {versus}
       <p className="series" aria-label={`Rounds: you ${myWins}, ${fight.foe?.name ?? 'friend'} ${foeWins}`}>
-        <b>{myWins}</b> – <b>{foeWins}</b>
+        <span className="series-score">
+          <b>{myWins}</b> – <b>{foeWins}</b>
+        </span>
         <small>{isMatchOver ? 'Match over' : `First to ${ROUNDS_TO_WIN} rounds wins`}</small>
       </p>
       {fight.foe ? (

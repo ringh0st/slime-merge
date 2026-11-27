@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Game, W, H, FIGHT_SHAPE } from './game/engine.js';
 import { TIERS, pieceName } from './game/tiers.js';
 import { JARS, isJarOpen, jarById } from './game/jars.js';
-import { EMPTY_LIFE, lifeAfterGame, unlockedHats } from './game/goals.js';
+import { EMPTY_LIFE, HATS, lifeAfterGame, unlockedHats } from './game/goals.js';
 import { sfx } from './game/audio.js';
 import Records from './components/Records.jsx';
 import Club from './components/Club.jsx';
@@ -147,10 +147,12 @@ export default function App() {
   const gameRef = useRef(null);
 
   // Players from before the big update first see what is new.
-  const [phase, setPhase] = useState(() =>
+  const [phase, setPhase] = useState(() => {
+    // A brand-new player has nothing to compare with: what's new is only for players from before an update.
+    if (store.get('slime.best', 0) === 0) store.set('slime.news', NEWS_VERSION);
     // The owner's numbers: the game's address with ?stats at the end.
-    new URLSearchParams(window.location.search).has('stats') ? 'stats' : (store.get('slime.best', 0) > 0 && store.get('slime.news', 0) < NEWS_VERSION ? 'news' : 'home'),
-  );
+    return new URLSearchParams(window.location.search).has('stats') ? 'stats' : store.get('slime.news', 0) < NEWS_VERSION ? 'news' : 'home';
+  });
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() => store.get('slime.best', 0));
   const [next, setNext] = useState({ tier: 0 });
@@ -785,9 +787,9 @@ export default function App() {
       </div>
 
       <header className="topbar">
-        <div className="brand">
+        <div className={`brand ${phase === 'home' ? '' : 'in-game'}`}>
           <SlimeIcon tier={3} size={34} />
-          <span>
+          <span className="brand-name">
             slime<b>merge</b>
           </span>
         </div>
@@ -1005,13 +1007,17 @@ export default function App() {
                     <b>{TIERS[result.top].name}</b>
                   </span>
                 </div>
+                {/* Play again comes right after the result, above the unlocks, so it's never below the edge on a small phone */}
+                <button className="btn" onClick={playAgain}>
+                  {result.daily ? 'Play Classic' : 'Play again'}
+                </button>
                 {(result.newHats?.length > 0 || result.newJars?.length > 0) && (
                   <ul className="unlocked">
                     {result.newHats.map((id) => (
                       <li key={id}>
                         <SlimeIcon tier={4} hat={id} size={38} />
                         <span>
-                          New hat! <b>Find it in the Book</b>
+                          New hat! <b>{HATS[id]?.name ?? 'Find it in the Book'}</b>
                         </span>
                       </li>
                     ))}
@@ -1050,9 +1056,6 @@ export default function App() {
                     }}
                   />
                 )}
-                <button className="btn" onClick={playAgain}>
-                  Play again
-                </button>
                 <div className="menu-actions">
                   <button className="btn ghost" onClick={() => (result.daily ? openCard('daily', 'over') : openRecords('over'))}>
                     {result.daily ? 'Today’s board' : club ? 'Club' : 'Top players'}

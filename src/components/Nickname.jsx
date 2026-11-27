@@ -19,6 +19,12 @@ export default function Nickname({ name, onChange }) {
     setIsEditing(false);
   };
 
+  const cancel = () => {
+    setTyped(name);
+    setProblem(null);
+    setIsEditing(false);
+  };
+
   if (!isEditing) {
     return (
       <button
@@ -43,7 +49,8 @@ export default function Nickname({ name, onChange }) {
   }
 
   return (
-    <form className="save-score name-form" onSubmit={submit}>
+    // Escape or the ✕ puts the name back as it was (the only way out used to be Save).
+    <form className="save-score name-form" onSubmit={submit} onKeyDown={(event) => event.key === 'Escape' && cancel()}>
       <input
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
@@ -55,6 +62,11 @@ export default function Nickname({ name, onChange }) {
         autoFocus
       />
       <button className="btn save">Save</button>
+      {name && (
+        <button type="button" className="btn ghost cancel" onClick={cancel} aria-label="Cancel">
+          ✕
+        </button>
+      )}
       {problem && (
         <p className="problem" role="alert">
           {problem}

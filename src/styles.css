@@ -181,6 +181,17 @@ button {
   background-clip: text;
   color: transparent;
 }
+/* Narrow phones: in a game the name steps aside (only the slime stays), so the buttons keep their room */
+@media (max-width: 400px) {
+  .brand.in-game .brand-name {
+    display: none;
+  }
+}
+@media (max-width: 340px) {
+  .topbar .actions {
+    gap: 4px;
+  }
+}
 .actions {
   display: flex;
   gap: 8px;
@@ -1780,8 +1791,9 @@ h2 {
     min-width: 0;
     padding-inline: 9px;
   }
+  /* The next slime shows as its picture only, so SCORE and BEST keep their room */
   .hud .next-name {
-    font-size: 13px;
+    display: none;
   }
   .evo {
     gap: 0;
@@ -1878,6 +1890,12 @@ button.chip {
   margin-bottom: 4px;
 }
 .name-form .btn.save {
+  margin-bottom: 4px;
+}
+.name-form .btn.cancel {
+  flex: none;
+  width: 44px;
+  padding-inline: 0;
   margin-bottom: 4px;
 }
 
@@ -1995,6 +2013,10 @@ button.chip {
 }
 @media (max-width: 350px) {
   .helper small {
+    display: none;
+  }
+  /* The jar is narrow here: the word says it, so the picture steps aside ("Shake" was cut to "Shal") */
+  .helper > svg {
     display: none;
   }
 }
@@ -2319,6 +2341,11 @@ button.chip {
   margin: 0;
   font: 700 26px 'Fredoka', system-ui, sans-serif;
   line-height: 1.1;
+}
+.series-score {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
 }
 .series small {
   font: 500 12.5px 'DM Sans', system-ui, sans-serif;
