@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import RecordList from './RecordList.jsx';
 import { loadDaily } from '../records.js';
-import { dailyStreak, dayKey, dayLabel, weekOf } from '../daily.js';
+import { dailyBonus, dailyStreak, dayKey, dayLabel, weekOf } from '../daily.js';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -71,16 +71,24 @@ export default function DailyCard({ played, club, mine, stamp, onPlay, isOpen = 
         empty="Nobody has played today’s jar yet."
       />
       {myScore == null ? (
-        <button className="btn" onClick={onPlay}>
-          {isOpen ? 'Continue today’s jar' : 'Play today’s jar'}
-        </button>
+        <>
+          {/* Today's reward, before playing: the streak goes on with today's jar */}
+          <p className="daily-bonus">
+            Today: <b>+{dailyBonus(streak + 1)}</b> jar points
+          </p>
+          <button className="btn" onClick={onPlay}>
+            {isOpen ? 'Continue today’s jar' : 'Play today’s jar'}
+          </button>
+        </>
       ) : (
         <>
           <p className="badge">Your jar: {myScore.toLocaleString()}</p>
           <button className="btn" onClick={share}>
             {copied ? 'Copied!' : 'Share my jar'}
           </button>
-          <p className="sub">A new jar comes tomorrow.</p>
+          <p className="sub">
+            A new jar comes tomorrow: <b>+{dailyBonus(streak + 1)}</b> jar points if you keep your streak 🔥
+          </p>
         </>
       )}
       <button className="btn ghost" onClick={onClose}>

@@ -31,3 +31,9 @@ export function dailyStreak(played, today = dayKey()) {
 
 /** "22 Nov" for a day key. */
 export const dayLabel = (day) => new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+/**
+ * Points toward new jars for playing the daily jar, every day (play-test: its only reward was a hat at 3 days):
+ * 300 on the first day, 100 more for each day in a row, up to 700.
+ */
+export const dailyBonus = (streak) => 300 + 100 * Math.min(Math.max(streak, 1) - 1, 4);

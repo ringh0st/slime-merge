@@ -138,3 +138,12 @@ export const jarById = (id) => JARS.find((jar) => jar.id === id) ?? JARS[0];
 const ALL_OPEN = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('alljars');
 
 export const isJarOpen = (jar, lifetimePoints) => ALL_OPEN || lifetimePoints >= jar.unlockAt;
+
+/** The next jar to open by total points, with how far along it is ({ jar, have, need, left }); null once all are open. */
+export function nextJarProgress(lifetimePoints) {
+  const index = JARS.findIndex((jar) => lifetimePoints < jar.unlockAt);
+  if (index < 0) return null;
+  const from = JARS[index - 1]?.unlockAt ?? 0;
+  const jar = JARS[index];
+  return { jar, have: lifetimePoints - from, need: jar.unlockAt - from, left: jar.unlockAt - lifetimePoints };
+}

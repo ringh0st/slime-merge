@@ -174,6 +174,59 @@ const HAT_ART = {
     ctx.shadowColor = 'transparent';
   },
   crown,
+  // The jar-star hats (goals.js): a gold star clip, a wizard's hat and a little sprout.
+  star(ctx, r) {
+    ctx.save();
+    ctx.translate(-r * 0.4, -r * 0.84);
+    ctx.rotate(-0.25);
+    ctx.fillStyle = '#FFD45E';
+    ctx.strokeStyle = '#E0A92A';
+    ctx.lineWidth = Math.max(1, r * 0.04);
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const d = i % 2 ? r * 0.12 : r * 0.27;
+      ctx.lineTo(Math.cos(a) * d, Math.sin(a) * d);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  },
+  wizard(ctx, r) {
+    ctx.fillStyle = '#4A6FD8';
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.84, r * 0.66, r * 0.13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.42, -r * 0.86);
+    ctx.quadraticCurveTo(-r * 0.1, -r * 1.3, r * 0.22, -r * 1.75);
+    ctx.quadraticCurveTo(r * 0.12, -r * 1.3, r * 0.42, -r * 0.86);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#FFD45E';
+    for (const [x, y, s] of [[-0.12, -1.05, 0.08], [0.16, -1.25, 0.06], [0.02, -1.48, 0.05]]) {
+      ctx.beginPath();
+      ctx.arc(r * x, r * y, r * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  sprout(ctx, r) {
+    ctx.strokeStyle = '#4E9F3D';
+    ctx.lineWidth = Math.max(1.5, r * 0.07);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.92);
+    ctx.lineTo(0, -r * 1.22);
+    ctx.stroke();
+    ctx.fillStyle = '#7ED957';
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(sx * r * 0.2, -r * 1.3, r * 0.22, r * 0.11, sx * -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
 };
 
 /** Hats sit on slimes big enough to carry one. */

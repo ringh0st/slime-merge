@@ -1109,6 +1109,28 @@ h2 {
   padding: 3px 10px;
 }
 
+/* The heat chip: a flame and the heat level, in the jar's top-left corner */
+.heat-tag {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: color-mix(in oklab, #ff7a45 85%, transparent);
+  font: 600 13px 'Fredoka', system-ui, sans-serif;
+  pointer-events: none;
+  animation: heatIn 500ms ease-out;
+}
+@keyframes heatIn {
+  from {
+    transform: scale(1.6);
+  }
+}
+
 /* ---------- The jars' looks (the real jar, its back panel and the small pictures in the picker) ---------- */
 .jar.jar-honey,
 .jar-mini.jar-honey {
@@ -1488,6 +1510,126 @@ h2 {
 }
 .special-list,
 .goal-list,
+.next-empty {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in oklab, var(--muted) 40%, transparent);
+}
+
+.news-icon.star-news {
+  color: #ffc53d;
+  font-size: 26px;
+}
+
+/* The daily jar's reward: jar points, bigger for each day in a row */
+.daily-bonus {
+  margin: 0;
+  text-align: center;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: color-mix(in oklab, #ffb347 22%, var(--glass));
+  font-size: 14px;
+}
+.daily-bonus small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Jar stars: three per jar on its tile, the key above the grid, and a new one on the game-over card */
+.jar-stars {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+}
+.jar-stars i {
+  font-style: normal;
+  color: color-mix(in oklab, var(--muted) 45%, transparent);
+}
+.jar-stars i.on {
+  color: #ffc53d;
+  text-shadow: 0 1px 4px rgba(255, 180, 40, 0.6);
+}
+.jar-star-key {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.jar-star-key b {
+  color: var(--ink);
+}
+.unlocked .star-badge {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  font-size: 26px;
+  color: #ffc53d;
+  text-shadow: 0 1px 6px rgba(255, 180, 40, 0.7);
+}
+
+/* What's next to earn: the next jar (or hat) with a bar that fills; on the game-over card this game's part grows in */
+.next-unlock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 16px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  text-align: left;
+}
+.next-unlock-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.next-unlock-text small {
+  color: var(--muted);
+}
+.next-unlock-bar {
+  position: relative;
+  height: 8px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 22%, transparent);
+  overflow: hidden;
+}
+.next-unlock-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+}
+.next-unlock-bar .now {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  animation: unlockGrow 1.2s ease-out 0.3s both;
+}
+.next-unlock-bar .was {
+  z-index: 1;
+  background: var(--accent);
+}
+@keyframes unlockGrow {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .next-unlock-bar .now {
+    animation: none;
+  }
+}
 .unlocked {
   list-style: none;
   margin: 0;

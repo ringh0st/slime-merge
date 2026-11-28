@@ -143,3 +143,13 @@ The studio name on the opening screen is Rinny's Games (`src/appInfo.js`), and a
 ## Play-test fixes (1.5.5)
 
 From a play-test on phone screens: Play again sits right under the result on the game-over card, above the unlocks, so it's never below the edge on a small phone, and a new hat says its name; after a daily jar it reads Play Classic. A tap during the short wait between drops is kept and dropped as soon as it's allowed (`pendingDrop` in engine.js), so no tap is lost. A brand-new player doesn't get the "What's new" card. The fight's round score reads 1 – 0 on one line. On narrow phones the name in the top bar steps aside during a game, the next slime shows as a picture only and the helpers show their word only. The nickname editor has a ✕ (and Escape) to cancel.
+
+## Coming back for more (1.6.0)
+
+From a play-test about whether players return (a careful player never overflowed in 400 drops, and after one look each jar was just Classic with a twist):
+
+- **Heat** (`HEAT`, `heatAt` in engine.js): a game gets harder as it goes. The first 40 drops are as before; then every 30 drops the heat rises a step (up to 6): rocks come more often, bigger slimes drop, bombs get rarer and the helpers fill more slowly. A flame chip in the jar shows the heat and a line says what each step brings (`HEAT_NOTES`). Fights stay at heat 0. Measured with a bot that plays carefully: games now end after about 140–240 drops (was 290–1,200), a few tense minutes.
+- **Jar stars** (`JAR_STARS`, `jarStarsOf` in goals.js): three stars in every jar (score 1,000, make a Mochi, score 3,000), shown on the jar tiles and celebrated on the game-over card; 6, 18 and 36 stars unlock three new hats (Star clip, Sprout, Wizard hat). Counted in normal games, not the daily jar or fights (`jarBest`, `jarTop` on the saved life).
+- **What's next** (`NextUnlock`, `nextJarProgress` in jars.js): a bar to the next jar on the home page and the game-over card, where this game's part grows in; once every jar is open, the hat goal closest to done.
+- **The daily jar pays** (`dailyBonus` in daily.js): jar points every day, 300 and 100 more for each day in a row up to 700; the daily card says today's and tomorrow's.
+- Restart on the pause card asks once; outside a game the Next spot is empty; the "Score 5,000" hat goal is now 4,000 (games are shorter); "What's new" tells returning players (`NEWS_VERSION` 2).

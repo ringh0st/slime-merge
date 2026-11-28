@@ -8,6 +8,7 @@ import { JARS, isJarOpen, jarById } from '../game/jars.js';
 import { unlockedHats } from '../game/goals.js';
 import { HAT_IDS } from '../game/goals.js';
 import { dailyStreak, dayKey, weekOf } from '../daily.js';
+import NextUnlock from './NextUnlock.jsx';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -87,6 +88,8 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
         </>
       )}
 
+      {life.games > 0 && <NextUnlock life={life} />}
+
       {target && (
         <p className="target">
           Next to beat in your club: <b>{target.name}</b> · {target.score.toLocaleString()}
@@ -145,7 +148,9 @@ export default function Home({ best, life, jar, hat, club, discovered, dailyPlay
           </span>
           <b>Slime book</b>
           <small>
-            {Math.min(discovered + 1, TIERS.length)}/{TIERS.length} slimes · {unlockedHats(life).length}/{HAT_IDS.length} hats
+            {Math.min(discovered + 1, TIERS.length)}/{TIERS.length} slimes
+            <br />
+            {unlockedHats(life).length}/{HAT_IDS.length} hats
           </small>
         </button>
       </div>

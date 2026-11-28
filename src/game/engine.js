@@ -29,6 +29,14 @@ export const FIGHT_SHAPE = { height: 290, scale: 0.62 };
 // Helpers: the player starts with one Shake and one Pop, earns more by scoring, and holds at most three of each.
 const HELPER_COST = 350;
 const HELPER_CAP = 3;
+/**
+ * Heat: a game gets harder as it goes, so it lasts a few tense minutes instead of an endless calm middle (play-test:
+ * a careful player never overflowed in 400 drops). The first `from` drops stay as they always were; then every
+ * `every` drops the heat rises a step, up to `max`: rocks come more often, bigger slimes drop, bombs (which help)
+ * get rarer and the helpers fill more slowly. Fights have their own pressure and stay at heat 0.
+ */
+export const HEAT = { from: 40, every: 30, max: 6 };
+export const heatAt = (drops) => (drops < HEAT.from ? 0 : Math.min(HEAT.max, 1 + Math.floor((drops - HEAT.from) / HEAT.every)));
 const KIND_OF = { [ROCK_TIER]: 'rock', [RAINBOW_TIER]: 'rainbow', [BOMB_TIER]: 'bomb' };
 const ICE = '#BFE9FF';
 // The gumball jar's pegs and the hourglass jar's waist (in the tall jar's own measures).
@@ -89,6 +97,7 @@ export class Game {
     this.rowFlash = null;
     this.fierce = false;
     this.gentle = false;
+    this.heats = true;
     this.hat = null;
     this.rng = Math.random;
     this.engine = Engine.create({ gravity: { y: this.jar.gravity }, positionIterations: 8, velocityIterations: 6 });
@@ -390,11 +399,19 @@ export class Game {
     this.hat = hat;
   }
 
+  /** The heat now (0 in a fight). */
+  heat() {
+    return this.heats ? heatAt(this.drops) : 0;
+  }
+
   pickTier() {
-    const total = DROP_WEIGHTS.reduce((a, b) => a + b, 0);
+    // Hotter: fewer of the smallest slimes, more of the biggest that drop.
+    const h = this.heat();
+    const weights = [DROP_WEIGHTS[0] - 3 * h, DROP_WEIGHTS[1] - 2 * h, DROP_WEIGHTS[2], DROP_WEIGHTS[3] + 2 * h, DROP_WEIGHTS[4] + 3 * h];
+    const total = weights.reduce((a, b) => a + b, 0);
     let x = this.rng() * total;
-    for (let i = 0; i < DROP_WEIGHTS.length; i++) {
-      x -= DROP_WEIGHTS[i];
+    for (let i = 0; i < weights.length; i++) {
+      x -= weights[i];
       if (x < 0) return i;
     }
     return 0;
@@ -405,13 +422,14 @@ export class Game {
     // Rocks start showing up after a while, then every 7th drop.
     // A player's very first game stays plain for a while (`gentle`), so the basics come first.
     const late = this.gentle ? GENTLE_DELAY : 0;
-    if (this.drops >= 18 + late && this.drops % 7 === 0) return { tier: ROCK_TIER };
+    const h = this.heat();
+    if (this.drops >= 18 + late && this.drops % Math.max(3, 7 - h) === 0) return { tier: ROCK_TIER };
     const isDue = !this.hadSpecial && this.drops >= FIRST_SPECIAL_BY_DROP + late;
     if (this.drops >= SPECIALS_FROM_DROP + late && (this.rng() < SPECIAL_CHANCE || isDue)) {
       this.hadSpecial = true;
       const pick = this.rng();
       if (pick < 0.4) return { tier: RAINBOW_TIER };
-      if (pick < 0.7) return { tier: BOMB_TIER };
+      if (pick < 0.7 - 0.05 * h) return { tier: BOMB_TIER };
       return { tier: this.pickTier(), frozen: true };
     }
     return { tier: this.pickTier() };
@@ -505,6 +523,8 @@ export class Game {
 
   /** Continue a game saved by serialize(). The seed must be the one the game was started with. */
   restore(saved, seed = null) {
+    // A saved game is never a fight, so it heats up like any other.
+    this.heats = true;
     this.reset('play', seed);
     for (let i = 0; i < saved.rngCalls; i++) this.rng();
     Object.assign(this, {
@@ -533,7 +553,9 @@ export class Game {
   }
 
   /** Start a game. With a seed (the daily jar) the same pieces drop for everyone. */
-  start(seed = null) {
+  /** @param heats false for a fight (no heat) */
+  start(seed = null, { heats = true } = {}) {
+    this.heats = heats;
     this.reset('play', seed);
   }
 
@@ -581,7 +603,7 @@ export class Game {
   addScore(points) {
     this.score += points;
     this.cb.onScore?.(this.score);
-    this.charge += points / HELPER_COST;
+    this.charge += points / (HELPER_COST * (1 + 0.35 * this.heat()));
     while (this.charge >= 1) {
       this.charge -= 1;
       const kind = this.helpers.shake <= this.helpers.pop ? 'shake' : 'pop';
@@ -710,6 +732,8 @@ export class Game {
     this.cb.onNext?.(this.next);
     this.cb.onHelpers?.(this.helperState());
     this.cb.onDrop?.(this.drops);
+    // The heat rises at set drops: say so once each time (not when a saved game picks up again).
+    if (this.heats && heatAt(this.drops) > heatAt(this.drops - 1)) this.cb.onHeat?.(heatAt(this.drops));
     if (this.jar.hasBricks && this.drops % BRICKS.backEvery === 0) this.layBricks();
     sfx.drop();
     return true;

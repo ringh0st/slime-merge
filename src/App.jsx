@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Game, W, H, FIGHT_SHAPE } from './game/engine.js';
+import { Game, W, H, FIGHT_SHAPE, heatAt } from './game/engine.js';
 import { TIERS, pieceName } from './game/tiers.js';
 import { JARS, isJarOpen, jarById } from './game/jars.js';
-import { EMPTY_LIFE, HATS, lifeAfterGame, unlockedHats } from './game/goals.js';
+import { EMPTY_LIFE, HATS, JAR_STARS, jarStarsOf, lifeAfterGame, unlockedHats } from './game/goals.js';
 import { sfx } from './game/audio.js';
 import Records from './components/Records.jsx';
 import Club from './components/Club.jsx';
 import DailyCard from './components/DailyCard.jsx';
+import NextUnlock from './components/NextUnlock.jsx';
 import JarPicker from './components/JarPicker.jsx';
 import SlimeBook from './components/SlimeBook.jsx';
 import HelperBar from './components/HelperBar.jsx';
@@ -26,7 +27,7 @@ import { haptic, isNative, setStatusBar } from './native.js';
 import { store } from './storage.js';
 import { countGame, countVisit, loadRecords, saveScore } from './records.js';
 import { nextToBeat, whoPassed } from './club.js';
-import { dailyStreak, dayKey, withDailyScore } from './daily.js';
+import { dailyBonus, dailyStreak, dayKey, withDailyScore } from './daily.js';
 
 const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -64,7 +65,7 @@ const SPECIAL_NOTES = {
 };
 const FROZEN_NOTE = 'Frozen: merge beside it to break the ice.';
 /** What the "What's new" card was last shown for; raise it to show the card again after a big update. */
-const NEWS_VERSION = 1;
+const NEWS_VERSION = 2;
 
 /** The screens that cover the jar. */
 const PAGES = ['home', 'news', 'jars', 'club', 'book', 'records', 'daily', 'fight', 'install', 'stats'];
@@ -138,6 +139,14 @@ const Icon = {
   ),
 };
 
+/** What each step of heat brings, said once as it comes (the game gets harder as it goes). */
+const HEAT_NOTES = {
+  1: '🔥 Heating up! Rocks come more often',
+  2: '🔥🔥 Hotter! Bigger slimes drop',
+  3: '🔥🔥🔥 Hot! Helpers fill slower',
+  more: '🔥 Even hotter! Hold on!',
+};
+
 export default function App() {
   const canvasRef = useRef(null);
   const tiltRef = useRef(null);
@@ -187,6 +196,10 @@ export default function App() {
   // The first game ever is guided: one short tip at a time (see the coach in the jar).
   const [coach, setCoach] = useState(null);
   const [specialNote, setSpecialNote] = useState(null);
+  // The game's heat (engine HEAT): a flame chip in the jar, and a line each time it rises.
+  const [heat, setHeat] = useState(0);
+  const [heatNote, setHeatNote] = useState(null);
+  const [isSureRestart, setIsSureRestart] = useState(false);
   const [combo, setCombo] = useState({ n: 0, id: 0 });
   const [danger, setDanger] = useState(0);
   const [discovered, setDiscovered] = useState(() => store.get('slime.discovered', 4));
@@ -416,6 +429,12 @@ export default function App() {
           setSpecialNote({ piece, text: piece.frozen ? FROZEN_NOTE : SPECIAL_NOTES[piece.tier], id: performance.now() });
         }
       },
+      onHeat: (level) => {
+        setHeat(level);
+        setHeatNote({ level, id: performance.now() });
+        sfx.discover();
+        haptic('medium');
+      },
       onTilt: (angle) => {
         leanRef.current = angle;
         tiltRef.current?.style.setProperty('--rz', `${angle}rad`);
@@ -478,13 +497,20 @@ export default function App() {
         setCoach(null);
         const day = dailyRunRef.current;
         const playedNow = day ? withDailyScore(dailyPlayedRef.current, day, finalScore) : dailyPlayedRef.current;
-        const nextLife = lifeAfterGame(lifeRef.current, finalScore, run, Boolean(day), day ? dailyStreak(playedNow, day) : 0);
+        // Jar stars count in normal games only (the daily jar and fights are the same Classic for everyone).
+        const starJar = day || isFightingRef.current ? null : game.jar.id;
+        const nextLife = lifeAfterGame(lifeRef.current, finalScore, run, Boolean(day), day ? dailyStreak(playedNow, day) : 0, starJar, top);
         // Points that were counted when the player went home in the middle of this game aren't counted twice.
         nextLife.points -= bankedRef.current;
+        // The daily jar pays a bonus toward new jars, bigger for each day in a row.
+        const bonus = day ? dailyBonus(dailyStreak(playedNow, day)) : 0;
+        nextLife.points += bonus;
         bankedRef.current = 0;
         // Hats and jars this game unlocked, to celebrate on the game-over card.
         const newHats = unlockedHats(nextLife).filter((id) => !unlockedHats(lifeRef.current).includes(id));
         const newJars = JARS.filter((j) => isJarOpen(j, nextLife.points) && !isJarOpen(j, lifeRef.current.points));
+        const starsBefore = starJar ? jarStarsOf(lifeRef.current, starJar) : [];
+        const newStars = starJar ? JAR_STARS.filter((star, i) => jarStarsOf(nextLife, starJar)[i] && !starsBefore[i]) : [];
         setLife(nextLife);
         store.set('slime.life', nextLife);
         if (day) {
@@ -500,7 +526,7 @@ export default function App() {
           store.set('slime.best', finalScore);
         }
         const isFight = isFightingRef.current;
-        setResult({ score: finalScore, top, newBest, newHats, newJars, daily: day, fight: isFight, jar: game.jar.id });
+        setResult({ score: finalScore, top, newBest, newHats, newJars, newStars, dailyBonus: bonus, streak: day ? dailyStreak(playedNow, day) : 0, daily: day, fight: isFight, jar: game.jar.id });
         setSaved(false);
         setAutoSave(null);
         // A game left from the pause card goes where the player asked, not to the game-over card.
@@ -607,8 +633,9 @@ export default function App() {
       gameRef.current.setJar(day || fightSeed ? JARS[0] : (inJar ?? jar));
       // A fight is played in a short jar with small slimes, so both jars fit on the screen.
       gameRef.current.setShape(fightSeed ? FIGHT_SHAPE : undefined);
-      gameRef.current.start(fightSeed ?? (day ? `daily-${day}` : null));
+      gameRef.current.start(fightSeed ?? (day ? `daily-${day}` : null), { heats: !fightSeed });
       setScore(0);
+      setHeat(0);
       setDanger(0);
       setCombo({ n: 0, id: 0 });
       setIsPopping(false);
@@ -632,6 +659,7 @@ export default function App() {
     gameRef.current.setJar(run.day ? JARS[0] : jarById(run.jarId));
     gameRef.current.setShape();
     gameRef.current.restore(run.state, run.day ? `daily-${run.day}` : null);
+    setHeat(heatAt(gameRef.current.drops));
     setDanger(0);
     setCombo({ n: 0, id: 0 });
     setIsPopping(false);
@@ -643,6 +671,7 @@ export default function App() {
   const togglePause = useCallback(() => {
     // A live fight can't be paused.
     if (isFightingRef.current) return;
+    setIsSureRestart(false);
     setPhase((p) => {
       if (p === 'play') {
         gameRef.current.setPaused(true);
@@ -853,7 +882,8 @@ export default function App() {
         </div>
         <div className="pill next">
           <span className="label">Next</span>
-          <SlimeIcon tier={next.tier} frozen={next.frozen} size={40} className="bob" />
+          {/* Outside a game there is no next piece: an empty spot, not a bomb with no name */}
+          {isInGame ? <SlimeIcon tier={next.tier} frozen={next.frozen} size={40} className="bob" /> : <span className="next-empty" aria-hidden="true" />}
           <span className="next-name">{isInGame ? pieceName(next) : '—'}</span>
         </div>
         {isFighting && fight.foe ? (
@@ -934,6 +964,16 @@ export default function App() {
               </div>
             )}
             {dailyRun && isInGame && <div className="daily-tag">Daily jar</div>}
+            {heat > 0 && isInGame && !isFighting && (
+              <div className="heat-tag" aria-label={`Heat ${heat}`}>
+                🔥<b>{heat}</b>
+              </div>
+            )}
+            {heatNote && phase === 'play' && !specialNote && (
+              <div className="toast special heat" key={heatNote.id} onAnimationEnd={() => setHeatNote(null)}>
+                <span>{HEAT_NOTES[heatNote.level] ?? HEAT_NOTES.more}</span>
+              </div>
+            )}
             {isFighting && fight.emote?.from === 'me' && (
               <span className="emote-pop mine" key={fight.emote.id} aria-hidden="true">
                 {fight.emote.e}
@@ -972,6 +1012,9 @@ export default function App() {
                 <button
                   className="btn ghost"
                   onClick={() => {
+                    // One mis-tap shouldn't throw a long game away: Restart asks once (a second tap does it).
+                    if (!dailyRun && !isSureRestart) return setIsSureRestart(true);
+                    setIsSureRestart(false);
                     gameRef.current.setPaused(false);
                     leaveGame();
                     if (dailyRun) {
@@ -980,7 +1023,7 @@ export default function App() {
                     } else start(null);
                   }}
                 >
-                  {dailyRun ? 'Leave the daily jar' : 'Restart'}
+                  {dailyRun ? 'Leave the daily jar' : isSureRestart ? 'Tap again to start over' : 'Restart'}
                 </button>
                 {!dailyRun && (
                   <button
@@ -1011,8 +1054,24 @@ export default function App() {
                 <button className="btn" onClick={playAgain}>
                   {result.daily ? 'Play Classic' : 'Play again'}
                 </button>
-                {(result.newHats?.length > 0 || result.newJars?.length > 0) && (
+                {result.dailyBonus > 0 && (
+                  <p className="daily-bonus">
+                    🔥 {result.streak} {result.streak === 1 ? 'day' : 'days'} · <b>+{result.dailyBonus}</b> jar points
+                    <small>Come back tomorrow for +{dailyBonus(result.streak + 1)}</small>
+                  </p>
+                )}
+                {(result.newHats?.length > 0 || result.newJars?.length > 0 || result.newStars?.length > 0) && (
                   <ul className="unlocked">
+                    {result.newStars?.map((star) => (
+                      <li key={star.id} className="jar-star-new">
+                        <span className="star-badge" aria-hidden="true">
+                          ★
+                        </span>
+                        <span>
+                          Jar star! <b>{star.text}</b> in the {jarById(result.jar).name}
+                        </span>
+                      </li>
+                    ))}
                     {result.newHats.map((id) => (
                       <li key={id}>
                         <SlimeIcon tier={4} hat={id} size={38} />
@@ -1031,6 +1090,7 @@ export default function App() {
                     ))}
                   </ul>
                 )}
+                <NextUnlock life={life} gained={result.score} />
                 {playerName && result.score > 0 && autoSave !== 'failed' && (
                   <p className="sub saved-as" role="status">
                     {saved ? (
@@ -1120,33 +1180,31 @@ export default function App() {
                 <h2>New in the jar!</h2>
                 <ul className="special-list">
                   <li>
-                    <SlimeIcon tier={-2} size={36} />
+                    <span className="news-icon" aria-hidden="true">
+                      🔥
+                    </span>
                     <span>
-                      <b>Special slimes</b> Rainbow, Bomb and Frozen drop in every game.
+                      <b>Games heat up</b> The longer you last, the more rocks and bigger slimes. Watch the flame!
                     </span>
                   </li>
                   <li>
-                    <span className="news-icon">{Icon.jar}</span>
-                    <span>
-                      <b>Helpers and jars</b> Shake, Pop and Hold under the jar. New jars open as you score.
+                    <span className="news-icon star-news" aria-hidden="true">
+                      ★
                     </span>
-                  </li>
-                  <li>
-                    <span className="news-icon">{Icon.club}</span>
                     <span>
-                      <b>Jar club</b> A private board for family and friends, with one short code.
+                      <b>Jar stars</b> Three stars to earn in every jar, and three new hats for them.
                     </span>
                   </li>
                   <li>
                     <span className="news-icon">{Icon.trophy}</span>
                     <span>
-                      <b>Daily jar</b> The same slimes for everyone, one try a day.
+                      <b>Daily jar pays</b> Jar points every day, more for each day in a row.
                     </span>
                   </li>
                   <li>
-                    <SlimeIcon tier={4} hat="top" size={36} />
+                    <span className="news-icon">{Icon.jar}</span>
                     <span>
-                      <b>Slime book</b> Goals that unlock hats for your slimes.
+                      <b>What's next</b> A bar shows how close the next jar is.
                     </span>
                   </li>
                 </ul>
@@ -1202,7 +1260,7 @@ export default function App() {
           )}
           {phase === 'jars' && (
             <div className="sheet">
-              <JarPicker jarId={jar.id} lifetimePoints={life.points} openGame={savedRun && !savedRun.day ? { jar: jarById(savedRun.jarId), score: savedRun.score } : null}
+              <JarPicker jarId={jar.id} lifetimePoints={life.points} life={life} openGame={savedRun && !savedRun.day ? { jar: jarById(savedRun.jarId), score: savedRun.score } : null}
                 onStart={(id) => {
                   // Asked and answered on the jars page: a new game in the picked jar, right now.
                   pickJar(id);
